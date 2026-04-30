@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import axios from 'axios'
 
 export const apiClient = axios.create({
@@ -9,7 +10,7 @@ export const apiClient = axios.create({
 // Inject auth token on every request
 apiClient.interceptors.request.use((config) => {
   // Read from localStorage directly to avoid circular store import
-  const stored = localStorage.getItem('businessdesk-auth')
+  const stored = localStorage.getItem('barberdesk-auth')
   if (stored) {
     const parsed = JSON.parse(stored) as { state?: { token?: string } }
     const token = parsed?.state?.token
@@ -23,7 +24,7 @@ apiClient.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('businessdesk-auth')
+      localStorage.removeItem('barberdesk-auth')
       window.location.href = '/login'
     }
     return Promise.reject(error)
