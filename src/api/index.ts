@@ -46,6 +46,7 @@ export const clientsApi = {
 export const servicesApi = {
   getAll:  (organizationId?: string) =>
     apiClient.get<Service[]>('/services', { params: { organizationId } }),
+  getById: (id: string) => apiClient.get<Service>(`/services/${id}`),
   create:  (data: Partial<Service>) => apiClient.post<Service>('/services', data),
   update:  (id: string, data: Partial<Service>) => apiClient.put<Service>(`/services/${id}`, data),
   delete:  (id: string) => apiClient.delete(`/services/${id}`),
@@ -62,12 +63,16 @@ export interface AppointmentFilters {
 }
 
 export const appointmentsApi = {
-  getAll:  (filters?: AppointmentFilters) =>
+  getAll:       (filters?: AppointmentFilters) =>
     apiClient.get<Appointment[]>('/appointments', { params: filters }),
-  create:  (data: Partial<Appointment>) => apiClient.post<Appointment>('/appointments', data),
-  update:  (id: string, data: Partial<Appointment>) =>
+  getAvailableSlots: (employeeId: string, date: string, slotDurationMinutes?: number) =>
+    apiClient.get(`/appointments/available-slots`, { params: { employeeId, date, slotDurationMinutes } }),
+  create:       (data: Partial<Appointment>) => apiClient.post<Appointment>('/appointments', data),
+  update:       (id: string, data: Partial<Appointment>) =>
     apiClient.put<Appointment>(`/appointments/${id}`, data),
-  delete:  (id: string) => apiClient.delete(`/appointments/${id}`),
+  updateStatus: (id: string, status: AppointmentStatus) =>
+    apiClient.patch<Appointment>(`/appointments/${id}/status`, { status }),
+  delete:       (id: string) => apiClient.delete(`/appointments/${id}`),
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
@@ -76,4 +81,18 @@ export const analyticsApi = {
     apiClient.get('/analytics/summary', { params: { locationId } }),
   getRevenueTrend: (locationId?: string) =>
     apiClient.get('/analytics/revenue-trend', { params: { locationId } }),
+}
+
+// ─── Commission ────────────────────────────────────────────────────────────────
+export const commissionApi = {
+  getConfig:        (locationId?: string) =>
+    apiClient.get('/commission-config', { params: { locationId } }),
+  create:           (data: any) =>
+    apiClient.post('/commission-config', data),
+  update:           (id: string, data: any) =>
+    apiClient.put(`/commission-config/${id}`, data),
+  delete:           (id: string) =>
+    apiClient.delete(`/commission-config/${id}`),
+  calculateCommission: (employeeId: string, appointmentPrice: number, locationId: string) =>
+    apiClient.post('/commission-config/calculate', { employeeId, appointmentPrice, locationId }),
 }

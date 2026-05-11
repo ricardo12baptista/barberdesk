@@ -6,10 +6,11 @@ import {
   employeesApi,
   locationsApi,
   servicesApi,
+  commissionApi,
   AppointmentFilters,
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { Appointment, Client, Employee, Location, Service } from '@/models'
+import type { Appointment, AppointmentStatus, Client, Employee, Location, Service } from '@/models'
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 export const qk = {
@@ -20,6 +21,8 @@ export const qk = {
   client:       (id: string) => ['clients', id] as const,
   services:     (orgId?: string) => ['services', orgId] as const,
   appointments: (filters?: AppointmentFilters) => ['appointments', filters] as const,
+  availableSlots: (employeeId?: string, date?: string, slotDuration?: number) => 
+    ['appointments', 'available-slots', employeeId, date, slotDuration] as const,
   summary:      (locationId?: string) => ['analytics', 'summary', locationId] as const,
   revenueTrend: (locationId?: string) => ['analytics', 'revenue-trend', locationId] as const,
 }
@@ -85,6 +88,9 @@ export const useServices = () => {
   })
 }
 
+export const useService = (id: string) =>
+  useQuery({ queryKey: ['services', id], queryFn: () => servicesApi.getById(id).then(r => r.data) })
+
 export const useCreateService = () => {
   const qc = useQueryClient()
   return useMutation({
@@ -132,11 +138,29 @@ export const useUpdateAppointment = () => {
   })
 }
 
+export const useUpdateAppointmentStatus = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
+      appointmentsApi.updateStatus(id, status).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['appointments'] }),
+  })
+}
+
 export const useDeleteAppointment = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => appointmentsApi.delete(id),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['appointments'] }),
+  })
+}
+
+export const useAvailableSlots = (employeeId?: string, date?: string, slotDurationMinutes = 30) => {
+  const { organization } = useAuthStore()
+  return useQuery({
+    queryKey: qk.availableSlots(employeeId, date, slotDurationMinutes),
+    queryFn:  () => appointmentsApi.getAvailableSlots(employeeId!, date!, slotDurationMinutes).then(r => r.data),
+    enabled:  !!organization?.id && !!employeeId && !!date,
   })
 }
 
@@ -234,5 +258,47 @@ export const useDeleteClient = () => {
   return useMutation({
     mutationFn: (id: string) => clientsApi.delete(id),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['clients'] }),
+  })
+}
+
+// ─── Commission ────────────────────────────────────────────────────────────────
+export const useCommissionConfig = (locationId?: string) => {
+  const { organization } = useAuthStore()
+  return useQuery({
+    queryKey: ['commission-config', organization?.id, locationId],
+    queryFn:  () => commissionApi.getConfig(locationId).then(r => r.data),
+    enabled:  !!organization?.id,
+  })
+}
+
+export const useCreateCommissionConfig = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: any) => commissionApi.create(data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['commission-config'] }),
+  })
+}
+
+export const useUpdateCommissionConfig = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      commissionApi.update(id, data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['commission-config'] }),
+  })
+}
+
+export const useDeleteCommissionConfig = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => commissionApi.delete(id),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['commission-config'] }),
+  })
+}
+
+export const useCalculateCommission = () => {
+  return useMutation({
+    mutationFn: ({ employeeId, appointmentPrice, locationId }: { employeeId: string; appointmentPrice: number; locationId: string }) =>
+      commissionApi.calculateCommission(employeeId, appointmentPrice, locationId).then(r => r.data),
   })
 }
