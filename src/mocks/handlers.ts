@@ -84,7 +84,14 @@ export const handlers = [
   http.post(`${API}/employees`, async ({ request }) => {
     await delay(DELAY)
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ id: `emp-new-${Date.now()}`, isActive: true, ...body }, { status: 201 })
+    const firstName = (body.firstName as string) ?? ''
+    const lastName = (body.lastName as string) ?? ''
+    return HttpResponse.json({
+      id: `emp-new-${Date.now()}`,
+      isActive: true,
+      name: `${firstName} ${lastName}`.trim(),
+      ...body,
+    }, { status: 201 })
   }),
 
   http.patch(`${API}/employees/:id`, async ({ params, request }) => {
