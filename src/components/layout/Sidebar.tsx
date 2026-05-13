@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CalendarDays, CalendarCheck2, Users, UserCircle,
   Scissors, MapPin, BarChart3, Settings, TrendingUp,
-  ChevronLeft, ChevronRight, Star, Crown, ChevronsUpDown,
+  ChevronLeft, ChevronRight, ChevronsUpDown, Star, Crown,
   LogOut, ChevronDown, ChevronUp, Shield, Briefcase, User, CalendarCheck,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -54,13 +54,6 @@ export function Sidebar() {
   const isSoloOwner = isSuperAdmin && locations.length === 1 && totalBarbers <= 1
 
   // ─── Nav items per role ─────────────────────────────────────────────────────
-  //
-  //  super_admin  → global access: all locations, all barbers, global financials
-  //  manager      → location-scoped: all barbers at location, location financials
-  //  partner      → own-scoped: same screens as manager but filtered to self only
-  //  employee     → own schedule / own clients only — no financial screens
-  //
-  // Barbeiro — no financial screen
   const employeeItems: NavItem[] = [
     { label: t('nav.myCalendar'),    to: '/calendar',     icon: CalendarDays   },
     { label: t('nav.appointments'),  to: '/appointments', icon: CalendarCheck2 },
@@ -69,7 +62,6 @@ export function Sidebar() {
     { label: t('nav.myPerformance'), to: '/reports',      icon: Star           },
   ]
 
-  // Parceiro — same screens as manager, data scoped to own
   const partnerItems: NavItem[] = [
     { label: t('nav.myCalendar'),    to: '/calendar',     icon: CalendarDays   },
     { label: t('nav.appointments'),  to: '/appointments', icon: CalendarCheck2 },
@@ -79,7 +71,6 @@ export function Sidebar() {
     { label: t('nav.myPerformance'), to: '/reports',      icon: BarChart3      },
   ]
 
-  // Gestor de Loja — full location access
   const managerItems: NavItem[] = [
     { label: t('nav.calendar'),     to: '/calendar',     icon: CalendarDays   },
     { label: t('nav.appointments'), to: '/appointments', icon: CalendarCheck2 },
@@ -90,7 +81,6 @@ export function Sidebar() {
     { label: t('nav.reports'),      to: '/reports',      icon: BarChart3      },
   ]
 
-  // Proprietário — global access
   const superAdminItems: NavItem[] = [
     { label: t('nav.calendar'),     to: '/calendar',     icon: CalendarDays   },
     { label: t('nav.appointments'), to: '/appointments', icon: CalendarCheck2 },
@@ -103,7 +93,6 @@ export function Sidebar() {
     { label: t('nav.reports'),      to: '/reports',      icon: BarChart3      },
   ]
 
-  // Solo proprietário without team
   const soloOwnerItems: NavItem[] = [
     { label: t('nav.calendar'),     to: '/calendar',     icon: CalendarDays   },
     { label: t('nav.appointments'), to: '/appointments', icon: CalendarCheck2 },
@@ -120,20 +109,17 @@ export function Sidebar() {
   else if (isPartner)   mainItems = partnerItems
   else if (isManager)   mainItems = managerItems
   else if (isSoloOwner) mainItems = soloOwnerItems
-  else                  mainItems = superAdminItems   // isSuperAdmin with team
+  else                  mainItems = superAdminItems
 
   const navItems: NavItem[] = [
     { label: t('nav.dashboard'), to: '/dashboard', icon: LayoutDashboard },
     ...mainItems,
   ]
 
-  // ─── Context label below org name ────────────────────────────────────────────
-  const locationLabel = isSuperAdmin
-    ? (activeLocation?.name ?? t('locations.allLocations'))
-    : (locations.find(l => l.id === user.locationId)?.name ?? '')
+  const locationLabel = activeLocation?.name ?? (locations.find(l => l.id === user.locationId)?.name ?? '')
 
   const handleLogout = () => {
-    setActiveLocation(null)   // clear location context before switching user
+    setActiveLocation(null)
     logout()
     navigate('/login')
   }
@@ -144,8 +130,7 @@ export function Sidebar() {
       'bg-sidebar border-r border-sidebar-border',
       sidebarCollapsed ? 'w-16' : 'w-64'
     )}>
-
-      {/* ── Header: org name ────────────────────────────────────────────────── */}
+      {/* ─── Header: org name ────────────────────────────────────────────────── */}
       <div className={cn(
         'flex items-center h-14 px-3 border-b border-sidebar-border flex-shrink-0 gap-2.5 min-w-0',
         sidebarCollapsed && 'justify-center px-2'
@@ -165,7 +150,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* ── Location switcher — super_admin com múltiplas lojas ─────────────── */}
+      {/* ── Location switcher — super_admin ─────────────────────────────────── */}
       {isSuperAdmin && locations.length > 1 && !sidebarCollapsed && (
         <div className="px-3 py-2.5 border-b border-sidebar-border flex-shrink-0">
           <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest mb-1.5 font-display">
@@ -173,10 +158,10 @@ export function Sidebar() {
           </p>
           <div className="relative">
             <select
-              value={activeLocation?.id ?? 'all'}
+              value={activeLocation?.id ?? ''}
               onChange={e => {
                 const v = e.target.value
-                setActiveLocation(v === 'all' ? null : (locations.find(l => l.id === v) ?? null))
+                if (v) setActiveLocation(locations.find(l => l.id === v) ?? null)
               }}
               className={cn(
                 'w-full h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
@@ -184,7 +169,7 @@ export function Sidebar() {
                 'text-sidebar-foreground focus:outline-none focus:ring-1 focus:ring-primary',
               )}
             >
-              <option value="all">{t('locations.allLocations')}</option>
+              <option value="" disabled>Selecionar loja...</option>
               {locations.map(l => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
@@ -232,7 +217,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* ── Settings link — only for super_admin and manager ─────────────────── */}
+      {/* ── Settings link ───────────────────────────────────────────────────── */}
       {!isEmployee && !isPartner && (
         <div className="px-2 pb-1 flex-shrink-0">
           <NavLink
@@ -252,7 +237,6 @@ export function Sidebar() {
 
       {/* ── User panel ──────────────────────────────────────────────────────── */}
       <div className="border-t border-sidebar-border flex-shrink-0">
-        {/* Expandable user card */}
         <button
           onClick={() => !sidebarCollapsed && setUserMenuOpen(o => !o)}
           className={cn(
@@ -261,13 +245,11 @@ export function Sidebar() {
             sidebarCollapsed && 'justify-center px-2'
           )}
         >
-          {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/30">
             <span className="text-xs font-display font-bold text-primary leading-none">
               {getInitials(user.name)}
             </span>
           </div>
-
           {!sidebarCollapsed && (
             <>
               <div className="flex-1 min-w-0 text-left">
@@ -287,7 +269,6 @@ export function Sidebar() {
           )}
         </button>
 
-        {/* Expanded: email + logout */}
         {userMenuOpen && !sidebarCollapsed && (
           <div className="px-3 pb-3 space-y-2">
             <div className="px-2 py-1.5 rounded-lg bg-sidebar-foreground/5 border border-sidebar-border">

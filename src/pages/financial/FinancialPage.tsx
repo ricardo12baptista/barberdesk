@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   TrendingUp, TrendingDown, Euro, CalendarDays,
-  Users, Clock, BarChart3, ArrowUpRight,
+  Users, BarChart3, ArrowUpRight, Building2, ChevronsUpDown,
 } from 'lucide-react'
 import {
   useAnalyticsSummary, useRevenueTrend, useLocations, useAllLocations,
@@ -77,9 +77,10 @@ export function FinancialPage() {
   // ── Role flags ──────────────────────────────────────────────────────────────
   const isSuperAdmin = user?.role === 'super_admin'
   const isPartner    = user?.role === 'partner'
-  // employee never reaches this page (no nav item)
 
-  const locationId = activeLocation?.id ?? user?.locationId ?? undefined
+  // ── In-page location filter (super_admin only) ────────────────────────────────
+  const [finLocationId, setFinLocationId] = useState<string | undefined>(undefined)
+  const effectiveLocationId = finLocationId ?? activeLocation?.id ?? user?.locationId ?? undefined
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const { data: ownLocations = [] } = useLocations()
@@ -91,19 +92,18 @@ export function FinancialPage() {
   const services = isSuperAdmin ? allServices : ownServices
 
   // Partner: scope appointments to own employee record
-  const { data: employees = [] } = useEmployees(locationId)
+  const { data: employees = [] } = useEmployees(effectiveLocationId)
   const myEmployee   = isPartner ? employees.find(e => e.userId === user?.id) : undefined
   const myEmpId      = myEmployee?.id
-  const commissionPct = myEmployee?.commissionPercent ?? 100   // 100% = full price (manager/super_admin)
+  const commissionPct = myEmployee?.commissionPercent ?? 100
 
   const showLocationChart = isSuperAdmin && locations.length > 1
 
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month')
 
-  const { isLoading: loadingSummary } = useAnalyticsSummary(locationId)
-  const { data: trend = [], isLoading: loadingTrend } = useRevenueTrend(locationId)
-  const { data: apts  = [] } = useAppointments({ locationId, employeeId: myEmpId })
-  // For self-scoped roles, apply commission to get personal earnings
+  const { isLoading: loadingSummary } = useAnalyticsSummary(effectiveLocationId)
+  const { data: trend = [], isLoading: loadingTrend } = useRevenueTrend(effectiveLocationId)
+  const { data: apts  = [] } = useAppointments({ locationId: effectiveLocationId, employeeId: myEmpId })
   const applyCommission = (price: number) => isPartner ? price * (commissionPct / 100) : price
 
   // ── Derived metrics ─────────────────────────────────────────────────────────
@@ -142,13 +142,35 @@ export function FinancialPage() {
 
   const subtitle = isPartner
     ? `Os meus ganhos (comissão ${commissionPct}%)`
-    : isSuperAdmin && !locationId
+    : isSuperAdmin && !effectiveLocationId
     ? t('financial.globalView')
-    : locations.find(l => l.id === locationId)?.name
+    : locations.find(l => l.id === effectiveLocationId)?.name
 
   return (
     <div>
       <PageHeader title={t('nav.financial')} subtitle={subtitle} />
+
+      {/* ── Location filter for super_admin ──────────────────────────────────── */}
+      {isSuperAdmin && locations.length > 1 && (
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative">
+            <select
+              value={finLocationId ?? 'all'}
+              onChange={e => { setFinLocationId(e.target.value === 'all' ? undefined : e.target.value); setPeriod('month') }}
+              className={cn(
+                'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
+                'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+              )}
+            >
+              <option value="all">Todas as Lojas</option>
+              {locations.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+      )}
 
       {/* Period selector + date range label */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
@@ -165,7 +187,6 @@ export function FinancialPage() {
             </button>
           ))}
         </div>
-        {/* Date range label */}
         {(() => {
           const now = new Date()
           let label = ''
@@ -240,7 +261,6 @@ export function FinancialPage() {
 
           {/* Bottom row */}
           <div className={cn('grid gap-4', showLocationChart ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-lg')}>
-
             {/* Top services */}
             <Card>
               <CardHeader className="pb-2">
@@ -277,7 +297,7 @@ export function FinancialPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
                     {t('financial.revenueByLocation')}
                   </CardTitle>
                 </CardHeader>

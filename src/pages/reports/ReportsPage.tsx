@@ -38,19 +38,20 @@ export function ReportsPage() {
   const isSuperAdmin       = user?.role === 'super_admin'
   const isPartner          = user?.role === 'partner'
   const isEmployee         = user?.role === 'employee'
-  //const isManager          = user?.role === 'manager'
   const isOwnOnly          = isPartner || isEmployee
   const isSelfScoped       = isOwnOnly
-  const locationId         = activeLocation?.id ?? user?.locationId ?? undefined
   const dateLocale         = i18n.language === 'pt' ? ptLocale : enUS
 
-  const queryLocationId    = isSuperAdmin ? locationId : (user?.locationId ?? undefined)
-  // Single employee lookup — used for scoping appointments, clients and employee filter
+  // ── In-page location filter (super_admin only) ────────────────────────────────
+  const [reportLocationId, setReportLocationId] = useState<string | undefined>(undefined)
+  const effectiveLocationId = reportLocationId ?? activeLocation?.id ?? user?.locationId ?? undefined
+  const queryLocationId = isSuperAdmin ? effectiveLocationId : (user?.locationId ?? undefined)
+
+  // Single employee lookup
   const { data: employees = [] } = useEmployees(queryLocationId)
   const myEmployee    = isOwnOnly ? employees.find(e => e.userId === user?.id) : undefined
   const myEmpId       = myEmployee?.id
   const commissionPct = myEmployee?.commissionPercent ?? 100
-  // Self-scoped roles see their commission earnings, not full price
   const applyCommission = useCallback((price: number) => isOwnOnly ? price * (commissionPct / 100) : price, [isOwnOnly, commissionPct])
   const { data: allApts   = [], isLoading } = useAppointments({
     locationId: queryLocationId,
@@ -96,7 +97,6 @@ export function ReportsPage() {
     { key: 'clients'   as const, label: t('reports.tabClients'),  icon: Star      },
     { key: 'services'  as const, label: t('reports.tabServices'), icon: Scissors  },
   ]
-  // Employee/partner only see overview + their clients + services (no barbers tab)
   const TABS = isSelfScoped
     ? ALL_TABS.filter(t => t.key !== 'employees')
     : ALL_TABS
@@ -158,6 +158,28 @@ export function ReportsPage() {
         title={t('nav.reports')}
         subtitle={`${apts.length} ${t('reports.appointments').toLowerCase()} · ${formatCurrency(totalRevenue)} · ${rangeLabel}`}
       />
+
+      {/* ── Location filter for super_admin ──────────────────────────────────── */}
+      {isSuperAdmin && locations.length > 1 && (
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative">
+            <select
+              value={reportLocationId ?? 'all'}
+              onChange={e => { setReportLocationId(e.target.value === 'all' ? undefined : e.target.value); setClientPage(1) }}
+              className={cn(
+                'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
+                'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+              )}
+            >
+              <option value="all">Todas as Lojas</option>
+              {locations.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+      )}
 
       {/* Date range */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -340,7 +362,6 @@ export function ReportsPage() {
           )}
 
           {tab === 'clients' && (() => {
-            // Sort
             const sorted = [...clientStats].sort((a, b) => {
               const dir = clientSort.dir === 'asc' ? 1 : -1
               switch (clientSort.col) {
@@ -414,7 +435,6 @@ export function ReportsPage() {
                   </tbody>
                 </table>
 
-                {/* Pagination footer */}
                 {totalClientPages > 1 && (
                   <div className="flex items-center justify-between px-4 py-3 border-t border-border">
                     <span className="text-xs text-muted-foreground font-body">

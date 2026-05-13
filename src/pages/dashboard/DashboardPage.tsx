@@ -1,17 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts'
-import { TrendingUp, CalendarCheck2, Users, AlertTriangle, Scissors, Star } from 'lucide-react'
-import { useAnalyticsSummary, useRevenueTrend, useAppointments, useClientsFlat, useServices, useEmployees } from '@/hooks'
+import { TrendingUp, CalendarCheck2, Users, AlertTriangle, Scissors, Star, ChevronsUpDown } from 'lucide-react'
+import { useAnalyticsSummary, useRevenueTrend, useAppointments, useClientsFlat, useServices, useEmployees, useLocations } from '@/hooks'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   Card, CardContent, CardHeader, CardTitle,
   MetricCard, PageHeader, Avatar, Spinner
 } from '@/components/ui'
-import { formatCurrency, formatTime, formatPercent } from '@/lib/utils'
+import { formatCurrency, formatTime, formatPercent, cn } from '@/lib/utils'
 import { format } from 'date-fns'
 
 // ─── 3 visible statuses ───────────────────────────────────────────────────────
@@ -30,54 +30,77 @@ export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { activeLocation } = useUIStore()
-  const locationId = activeLocation?.id ?? (user?.locationId ?? undefined)
+  const { data: locations = [] } = useLocations()
+
+  // ── In-page location filter (super_admin only) ────────────────────────────────
+  const [dashLocationId, setDashLocationId] = useState<string | undefined>(undefined)
+  const effectiveLocationId = dashLocationId ?? activeLocation?.id ?? (user?.locationId ?? undefined)
 
   // ── Role flags ──────────────────────────────────────────────────────────────
   const isSuperAdmin = user?.role === 'super_admin'
   const isPartner    = user?.role === 'partner'
   const isEmployee   = user?.role === 'employee'
-  // partner and employee only see own appointments
   const isOwnOnly    = isPartner || isEmployee
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const { data: clients   = [] } = useClientsFlat()
   const { data: services  = [] } = useServices()
-  const { data: employees = [] } = useEmployees(locationId)
+  const { data: employees = [] } = useEmployees(effectiveLocationId)
 
   const clientMap  = useMemo(() => Object.fromEntries(clients.map(c  => [c.id, c])),  [clients])
   const serviceMap = useMemo(() => Object.fromEntries(services.map(s => [s.id, s])),  [services])
   const empMap     = useMemo(() => Object.fromEntries(employees.map(e => [e.id, e])), [employees])
 
-  // Own-only roles: scope to their employee record
   const myEmployeeId = isOwnOnly
     ? employees.find(e => e.userId === user?.id)?.id
     : undefined
 
-  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary(locationId)
-  const { data: trend, isLoading: trendLoading } = useRevenueTrend(locationId)
+  const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary(effectiveLocationId)
+  const { data: trend, isLoading: trendLoading } = useRevenueTrend(effectiveLocationId)
   const safeTrend = Array.isArray(trend) ? trend : []
   const today = format(new Date(), 'yyyy-MM-dd')
   const { data: todayApts, isLoading: aptsLoading } = useAppointments({
-    startsAt: today, endsAt: today, locationId, employeeId: myEmployeeId,
+    startsAt: today, endsAt: today, locationId: effectiveLocationId, employeeId: myEmployeeId,
   })
-  const safeTodayApts = Array.isArray(todayApts) ? todayApts : []  // in case API returns object with pagination metadata
+  const safeTodayApts = Array.isArray(todayApts) ? todayApts : []
 
-  // ── Subtitle ────────────────────────────────────────────────────────────────
-  const subtitle = activeLocation
-    ? activeLocation.name
-    : isSuperAdmin
-    ? 'Visão Global — Todas as Lojas'
-    : isPartner
-    ? 'Os meus serviços'
-    : undefined
+  // ── Subtitle with location filter (super_admin only) ──────────────────────────
+  const subtitleEl = (
+    <div className="flex items-center gap-2">
+      {isSuperAdmin && locations.length > 1 ? (
+        <div className="relative inline-flex">
+          <select
+            value={dashLocationId ?? 'all'}
+            onChange={e => setDashLocationId(e.target.value === 'all' ? undefined : e.target.value)}
+            className={cn(
+              'h-6 rounded text-xs font-body appearance-none cursor-pointer pl-1 pr-5',
+              'bg-transparent border-0 text-muted-foreground hover:text-foreground',
+              'focus:outline-none focus:ring-0',
+            )}
+          >
+            <option value="all">Visão Global — Todas as Lojas</option>
+            {locations.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <ChevronsUpDown className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+        </div>
+      ) : effectiveLocationId ? (
+        <span className="text-muted-foreground">{locations.find(l => l.id === effectiveLocationId)?.name ?? ''}</span>
+      ) : isSuperAdmin ? (
+        <span className="text-muted-foreground">Visão Global — Todas as Lojas</span>
+      ) : isPartner ? (
+        <span className="text-muted-foreground">Os meus serviços</span>
+      ) : null}
+    </div>
+  )
 
   return (
     <div>
-      <PageHeader title={t('dashboard.title')} subtitle={subtitle} />
+      <PageHeader title={t('dashboard.title')} subtitle={subtitleEl} />
 
       {summaryLoading ? <Spinner /> : (
         <>
-          {/* ── Metric cards — employee/partner don't see global financial KPIs ── */}
           <div className={`grid gap-4 mb-6 ${isOwnOnly ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
             {!isOwnOnly && (
               <MetricCard
@@ -110,7 +133,6 @@ export function DashboardPage() {
             />
           </div>
 
-          {/* ── Charts — hidden for employee (no financial context) ─────────── */}
           {!isEmployee && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
               <Card className="lg:col-span-2">
@@ -181,7 +203,6 @@ export function DashboardPage() {
             </div>
           )}
 
-          {/* ── Upcoming appointments ────────────────────────────────────────── */}
           <Card>
             <CardHeader>
               <CardTitle>

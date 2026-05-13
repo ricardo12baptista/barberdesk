@@ -36,7 +36,11 @@ export function AppInitializer() {
         setActiveLocation(userLoc)
       }
     }
-    // super_admin: stays at whatever they last selected (or null = all locations)
+
+    // For super_admin: auto-set first location if none selected
+    if (user?.role === 'super_admin' && !activeLocation && locations.length > 0) {
+      setActiveLocation(locations[0])
+    }
   }, [organization?.id, locations.length, user?.role, user?.locationId])
 
   // Employee count for isSoloOwner

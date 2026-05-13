@@ -157,7 +157,7 @@ Input.displayName = 'Input'
 // ─── PageHeader ───────────────────────────────────────────────────────────────
 interface PageHeaderProps {
   title: string
-  subtitle?: string
+  subtitle?: string | React.ReactNode
   actions?: React.ReactNode
 }
 export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
