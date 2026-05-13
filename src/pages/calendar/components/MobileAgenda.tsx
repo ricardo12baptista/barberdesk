@@ -128,7 +128,7 @@ export function MobileAgenda({
           <div className="text-right">
             <p className="text-xs text-muted-foreground font-body">Receita prevista</p>
             <p className="text-sm font-display font-semibold text-primary">
-              {formatCurrency(todayApts.filter(a => !['cancelled','no_show'].includes(a.status)).reduce((s, a) => s + a.price, 0))}
+              {formatCurrency(todayApts.filter(a => !['cancelled','no_show'].includes(a.status)).reduce((s, a) => s + (a.price ?? 0), 0))}
             </p>
           </div>
         )}
@@ -210,7 +210,7 @@ export function MobileAgenda({
                   {/* Price + chevron */}
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-sm font-display font-semibold text-foreground">
-                      {formatCurrency(apt.price)}
+                      {formatCurrency(apt.price ?? 0)}
                     </span>
                     <ChevronRight
                       className={cn('w-3.5 h-3.5 text-muted-foreground/50 transition-transform', isExpanded && 'rotate-90')}

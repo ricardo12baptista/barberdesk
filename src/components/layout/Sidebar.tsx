@@ -51,7 +51,7 @@ export function Sidebar() {
   const roleMeta     = ROLE_META[user.role] ?? ROLE_META.employee
 
   // isSoloOwner: guard against loading race — only true once locations have loaded
-  const isSoloOwner = isSuperAdmin && locations.length > 0 && totalBarbers <= 1
+  const isSoloOwner = isSuperAdmin && locations.length === 1 && totalBarbers <= 1
 
   // ─── Nav items per role ─────────────────────────────────────────────────────
   //
@@ -109,6 +109,7 @@ export function Sidebar() {
     { label: t('nav.appointments'), to: '/appointments', icon: CalendarCheck2 },
     { label: t('nav.clients'),      to: '/clients',      icon: UserCircle     },
     { label: t('nav.services'),     to: '/services',     icon: Scissors       },
+    { label: t('nav.employees'),    to: '/employees',    icon: Users          },
     { label: t('nav.schedule'),      to: '/schedule',     icon: CalendarCheck    },
     { label: t('nav.financial'),    to: '/financial',    icon: TrendingUp     },
     { label: t('nav.reports'),      to: '/reports',      icon: BarChart3      },

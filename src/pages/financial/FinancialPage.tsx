@@ -109,27 +109,27 @@ export function FinancialPage() {
   // ── Derived metrics ─────────────────────────────────────────────────────────
   const serviceNameMap   = Object.fromEntries(services.map(s => [s.id, s.name]))
   const completedApts    = apts.filter(a => a.status === 'completed')
-  const totalRevenue     = completedApts.reduce((s, a) => s + applyCommission(a.price), 0)
+  const totalRevenue     = completedApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0)
   const avgTicket        = completedApts.length ? totalRevenue / completedApts.length : 0
   const cancelledCount   = apts.filter(a => a.status === 'cancelled' || a.status === 'no_show').length
   const noShowRate       = apts.length ? cancelledCount / apts.length : 0
 
   const statusRevenue = {
-    completed: completedApts.reduce((s, a) => s + applyCommission(a.price), 0),
-    pending:   apts.filter(a => a.status === 'pending').reduce((s, a) => s + applyCommission(a.price), 0),
-    confirmed: apts.filter(a => a.status === 'confirmed').reduce((s, a) => s + applyCommission(a.price), 0),
+    completed: completedApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
+    pending:   apts.filter(a => a.status === 'pending').reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
+    confirmed: apts.filter(a => a.status === 'confirmed').reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
   }
   const projectedRevenue = statusRevenue.completed + statusRevenue.pending + statusRevenue.confirmed
 
   const serviceRevMap = completedApts.reduce((acc, a) => {
     const name = serviceNameMap[a.serviceId] ?? a.serviceId
-    acc[name] = (acc[name] ?? 0) + applyCommission(a.price)
+    acc[name] = (acc[name] ?? 0) + applyCommission(a.price ?? 0)
     return acc
   }, {} as Record<string, number>)
   const topServices = Object.entries(serviceRevMap).sort(([, a], [, b]) => b - a).slice(0, 5)
 
   const locationRevMap = completedApts.reduce((acc, a) => {
-    acc[a.locationId] = (acc[a.locationId] ?? 0) + a.price
+    acc[a.locationId] = (acc[a.locationId] ?? 0) + (a.price ?? 0)
     return acc
   }, {} as Record<string, number>)
 

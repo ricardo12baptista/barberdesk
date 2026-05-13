@@ -5,7 +5,7 @@ import { useClients, useUpdateClient, useDeleteClient } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { PageHeader, Button, Badge, Avatar, Card, CardContent, Input, Spinner, EmptyState } from '@/components/ui'
 import { tagColors, formatDate, cn } from '@/lib/utils'
-import type { Client } from '@/models'
+import type { Client, ClientTag } from '@/models'
 
 const PAGE_SIZE = 15
 
@@ -107,9 +107,10 @@ export function ClientsPage() {
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
 
-  const clients    = result?.data    ?? (Array.isArray(result) ? result : []) as Client[]
-  const total      = result?.total   ?? clients.length
-  const totalPages = result?.totalPages ?? 1
+  const isPaginated = !!result && !Array.isArray(result)
+  const clients     = (Array.isArray(result) ? result : result?.data ?? []) as Client[]
+  const total       = isPaginated ? result.total : clients.length
+  const totalPages  = isPaginated ? result.totalPages : 1
 
   const handleSearch = useCallback((value: string) => {
     setDraftSearch(value)
@@ -122,7 +123,7 @@ export function ClientsPage() {
     const newTags = isBlocked
       ? client.tags.filter(t => t !== 'blacklisted')
       : [...client.tags.filter(t => t !== 'blacklisted'), 'blacklisted']
-    await updateClient.mutateAsync({ id: client.id, data: { tags: newTags } })
+    await updateClient.mutateAsync({ id: client.id, data: { tags: newTags as ClientTag[] } })
   }
 
   const handleDelete = async (client: Client) => {

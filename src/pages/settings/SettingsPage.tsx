@@ -223,7 +223,6 @@ export function SettingsPage() {
   const { data: employees = [] } = useEmployees(locationId)
   const myEmployee = employees.find(e => e.userId === user?.id)
 
-  const isSuperAdmin = user?.role === 'super_admin'
   const isManager    = user?.role === 'manager'
 
   // Employee / Partner — only see their own schedule

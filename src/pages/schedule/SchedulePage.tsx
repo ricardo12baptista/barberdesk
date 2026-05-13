@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, CalendarOff, Clock, Save, Loader2, CalendarDays, AlertTriangle, Settings2, User } from 'lucide-react'
+import { Plus, Trash2, CalendarOff, Clock, Save, CalendarDays, AlertTriangle, Settings2, User } from 'lucide-react'
 import { format, parseISO, eachDayOfInterval } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { useLocations, useEmployees } from '@/hooks'
+import { locationScheduleApi, type EmployeeAbsence } from '@/api'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Spinner, Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import type { LocationSchedule, LocationClosure } from '@/models'
+import type { LocationSchedule, LocationClosure, LocationSettings } from '@/models'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS: { dow: 0|1|2|3|4|5|6; label: string }[] = [
@@ -36,19 +37,43 @@ const ADVANCE_OPTIONS = [0, 1, 2, 3, 6, 12, 24, 48]
 
 const inputCls = 'h-8 rounded-lg border border-input bg-muted/30 px-2 text-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
 
+const createDefaultSchedule = (locationId: string): LocationSchedule[] =>
+  DAYS.map(({ dow }) => ({
+    locationId,
+    dayOfWeek: dow,
+    isOpen: dow !== 0,
+    openTime: '09:00',
+    closeTime: '19:00',
+  }))
+
+const normalizeSchedule = (locationId: string, schedule: LocationSchedule[]): LocationSchedule[] => {
+  const byDay = new Map(schedule.map(day => [day.dayOfWeek, day]))
+  return createDefaultSchedule(locationId).map(day => ({ ...day, ...byDay.get(day.dayOfWeek) }))
+}
+
 // ─── Data hooks ───────────────────────────────────────────────────────────────
 function useSchedule(locationId: string) {
   const [schedule, setSchedule] = useState<LocationSchedule[]>([])
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [dirty, setDirty]       = useState(false)
+  const [error, setError]       = useState('')
 
   useEffect(() => {
-    if (!locationId) return
+    if (!locationId) {
+      setLoading(false)
+      setSchedule([])
+      return
+    }
     setLoading(true)
-    fetch(`/api/locations/${locationId}/schedule`)
-      .then(r => r.json())
-      .then(d => { setSchedule(d); setLoading(false) })
+    setError('')
+    locationScheduleApi.getSchedule(locationId)
+      .then(r => setSchedule(normalizeSchedule(locationId, r.data)))
+      .catch(() => {
+        setSchedule(createDefaultSchedule(locationId))
+        setError('Nao foi possivel carregar o horario guardado. A mostrar horario padrao.')
+      })
+      .finally(() => setLoading(false))
   }, [locationId])
 
   const update = (dow: number, patch: Partial<LocationSchedule>) => {
@@ -58,113 +83,150 @@ function useSchedule(locationId: string) {
 
   const save = async () => {
     setSaving(true)
-    await fetch(`/api/locations/${locationId}/schedule`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schedule),
-    })
-    setSaving(false); setDirty(false)
+    setError('')
+    try {
+      await locationScheduleApi.updateSchedule(locationId, schedule)
+      setDirty(false)
+    } catch {
+      setError('Nao foi possivel guardar o horario.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  return { schedule, loading, saving, dirty, update, save, getDay: (dow: number) => schedule.find(s => s.dayOfWeek === dow) }
+  return { schedule, loading, saving, dirty, error, update, save, getDay: (dow: number) => schedule.find(s => s.dayOfWeek === dow) }
 }
 
-type SettingsState = {
-  horizonMode: 'rolling' | 'monthly' | 'fixed'
-  rollingValue: number
-  rollingUnit: 'days' | 'weeks' | 'months'
-  monthlyOpenDay: number
-  fixedOpenUntil: string
-  minAdvanceHours: number
-  slotIntervalMins: number
-}
-
-const DEFAULT_SETTINGS: SettingsState = {
+const DEFAULT_SETTINGS: Omit<LocationSettings, 'locationId'> = {
   horizonMode: 'rolling', rollingValue: 30, rollingUnit: 'days',
   monthlyOpenDay: 25, fixedOpenUntil: '', minAdvanceHours: 1, slotIntervalMins: 30,
 }
 
 function useSettings(locationId: string) {
-  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState<LocationSettings>({ locationId: '', ...DEFAULT_SETTINGS })
   const [saving, setSaving]     = useState(false)
   const [dirty, setDirty]       = useState(false)
+  const [error, setError]       = useState('')
 
   useEffect(() => {
     if (!locationId) return
-    fetch(`/api/locations/${locationId}/settings`)
-      .then(r => r.json())
-      .then(d => setSettings({ ...DEFAULT_SETTINGS, ...d }))
+    setError('')
+    locationScheduleApi.getSettings(locationId)
+      .then(r => setSettings({ ...DEFAULT_SETTINGS, ...r.data, locationId }))
+      .catch(() => {
+        setSettings({ locationId, ...DEFAULT_SETTINGS })
+        setError('Nao foi possivel carregar as definicoes guardadas. A mostrar definicoes padrao.')
+      })
   }, [locationId])
 
-  const update = (patch: Partial<SettingsState>) => { setSettings(p => ({ ...p, ...patch })); setDirty(true) }
+  const update = (patch: Partial<LocationSettings>) => { setSettings(p => ({ ...p, ...patch })); setDirty(true) }
 
   const save = async () => {
     setSaving(true)
-    await fetch(`/api/locations/${locationId}/settings`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings),
-    })
-    setSaving(false); setDirty(false)
+    setError('')
+    try {
+      await locationScheduleApi.updateSettings(locationId, settings)
+      setDirty(false)
+    } catch {
+      setError('Nao foi possivel guardar as definicoes.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  return { settings, saving, dirty, update, save }
+  return { settings, saving, dirty, error, update, save }
 }
 
 function useClosures(locationId: string) {
   const [closures, setClosures] = useState<LocationClosure[]>([])
   const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
 
   useEffect(() => {
-    if (!locationId) return
-    fetch(`/api/locations/${locationId}/closures`)
-      .then(r => r.json())
-      .then(d => { setClosures(d); setLoading(false) })
+    if (!locationId) {
+      setLoading(false)
+      setClosures([])
+      return
+    }
+    setLoading(true)
+    setError('')
+    locationScheduleApi.getClosures(locationId)
+      .then(r => setClosures(r.data))
+      .catch(() => {
+        setClosures([])
+        setError('Nao foi possivel carregar encerramentos.')
+      })
+      .finally(() => setLoading(false))
   }, [locationId])
 
-  const add = async (data: object) => {
-    const res = await fetch(`/api/locations/${locationId}/closures`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    })
-    const created = await res.json()
+  const add = async (data: Omit<LocationClosure, 'id' | 'locationId'>) => {
+    setError('')
+    const res = await locationScheduleApi.createClosure(locationId, data)
+    const created = res.data
     setClosures(p => [...p, created].sort((a, b) => a.startDate.localeCompare(b.startDate)))
   }
 
   const remove = async (id: string) => {
-    await fetch(`/api/locations/${locationId}/closures/${id}`, { method: 'DELETE' })
+    setError('')
+    await locationScheduleApi.deleteClosure(locationId, id)
     setClosures(p => p.filter(c => c.id !== id))
   }
 
-  return { closures, loading, add, remove }
+  return { closures, loading, error, add, remove }
 }
 
 function useAbsences(locationId: string) {
-  const [absences, setAbsences] = useState<any[]>([])
+  const [absences, setAbsences] = useState<EmployeeAbsence[]>([])
+  const [error, setError]       = useState('')
 
   useEffect(() => {
-    if (!locationId) return
-    fetch(`/api/locations/${locationId}/employee-absences`).then(r => r.json()).then(setAbsences)
+    if (!locationId) {
+      setAbsences([])
+      return
+    }
+    setError('')
+    locationScheduleApi.getAbsences(locationId)
+      .then(r => setAbsences(r.data))
+      .catch(() => {
+        setAbsences([])
+        setError('Nao foi possivel carregar ausencias.')
+      })
   }, [locationId])
 
-  const add = async (data: object) => {
-    const res = await fetch(`/api/locations/${locationId}/employee-absences`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    })
-    const created = await res.json()
-    setAbsences(p => [...p, created].sort((a: any, b: any) => a.startDate.localeCompare(b.startDate)))
+  const add = async (data: Omit<EmployeeAbsence, 'id' | 'locationId'>) => {
+    setError('')
+    const res = await locationScheduleApi.createAbsence(locationId, data)
+    const created = res.data
+    setAbsences(p => [...p, created].sort((a, b) => a.startDate.localeCompare(b.startDate)))
   }
 
   const remove = async (id: string) => {
-    await fetch(`/api/locations/${locationId}/employee-absences/${id}`, { method: 'DELETE' })
-    setAbsences(p => p.filter((a: any) => a.id !== id))
+    setError('')
+    await locationScheduleApi.deleteAbsence(locationId, id)
+    setAbsences(p => p.filter(a => a.id !== id))
   }
 
-  return { absences, add, remove }
+  return { absences, error, add, remove }
 }
 
+type ClosurePayload = Omit<LocationClosure, 'id' | 'locationId'>
+type AbsencePayload = Omit<EmployeeAbsence, 'id' | 'locationId'>
+type AddModalProps =
+  | {
+      mode: 'closure'
+      employees: { id: string; name: string }[]
+      onAdd: (data: ClosurePayload) => Promise<void>
+      onClose: () => void
+    }
+  | {
+      mode: 'absence'
+      employees: { id: string; name: string }[]
+      onAdd: (data: AbsencePayload) => Promise<void>
+      onClose: () => void
+    }
+
 // ─── Add Closure / Absence Modal ─────────────────────────────────────────────
-function AddModal({ mode, employees, onAdd, onClose }: {
-  mode: 'closure' | 'absence'
-  employees: { id: string; name: string }[]
-  onAdd: (data: object) => Promise<void>
-  onClose: () => void
-}) {
+function AddModal({ mode, employees, onAdd, onClose }: AddModalProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [form, setForm] = useState({
     startDate: today, endDate: today, reason: '', type: 'vacation', employeeId: employees[0]?.id ?? '',
@@ -178,10 +240,21 @@ function AddModal({ mode, employees, onAdd, onClose }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    await onAdd(mode === 'closure'
-      ? { startDate: form.startDate, endDate: form.endDate, reason: form.reason, type: form.type }
-      : { employeeId: form.employeeId, startDate: form.startDate, endDate: form.endDate, reason: form.reason }
-    )
+    if (mode === 'closure') {
+      await onAdd({
+        startDate: form.startDate,
+        endDate: form.endDate,
+        reason: form.reason,
+        type: form.type as LocationClosure['type'],
+      })
+    } else {
+      await onAdd({
+        employeeId: form.employeeId,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        reason: form.reason,
+      })
+    }
     onClose()
   }
 
@@ -371,6 +444,7 @@ export function SchedulePage() {
   const [modal, setModal] = useState<'closure' | 'absence' | null>(null)
 
   const hasUnsaved = sched.dirty || sets.dirty
+  const errors = [sched.error, sets.error, closures.error, absences.error].filter(Boolean)
 
   return (
     <div>
@@ -401,6 +475,12 @@ export function SchedulePage() {
           >
             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
+        </div>
+      )}
+
+      {errors.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 font-body">
+          {errors[0]}
         </div>
       )}
 
@@ -623,11 +703,20 @@ export function SchedulePage() {
         </div>
       )}
 
-      {modal && (
+      {modal === 'closure' && (
         <AddModal
-          mode={modal}
+          mode="closure"
           employees={employees}
-          onAdd={modal === 'closure' ? closures.add : absences.add}
+          onAdd={closures.add}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {modal === 'absence' && (
+        <AddModal
+          mode="absence"
+          employees={employees}
+          onAdd={absences.add}
           onClose={() => setModal(null)}
         />
       )}

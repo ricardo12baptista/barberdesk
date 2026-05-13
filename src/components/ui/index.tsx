@@ -213,9 +213,9 @@ interface AvatarProps {
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }
-export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
+export function Avatar({ name = '', src, size = 'md', className }: AvatarProps) {
   const sizes = { sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base' }
-  const initials = name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+  const initials = (name || '').split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
   return (
     <div className={cn('rounded-full bg-primary/20 flex items-center justify-center font-display font-semibold text-primary flex-shrink-0', sizes[size], className)}>
       {src ? <img src={src} alt={name} className="w-full h-full rounded-full object-cover" /> : initials}

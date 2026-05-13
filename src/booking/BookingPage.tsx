@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Scissors, MapPin, ChevronRight, ChevronLeft, Clock, Star, Check, User, Phone, Calendar, Loader2, Search } from 'lucide-react'
+import { Scissors, MapPin, ChevronRight, ChevronLeft, Clock, Star, Check, User, Phone, Calendar, Loader2 } from 'lucide-react'
 import { format, addDays, startOfDay, addMinutes, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, isSameDay, isAfter } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -252,7 +252,7 @@ function initials(name: string)  { return name.split(' ').map(n => n[0]).join(''
 
 // ─── Step 3: Date, barber and time slot ───────────────────────────────────────
 function StepDateTime({
-  org, loc, svc, onSelect,
+  loc, svc, onSelect,
 }: {
   org: PublicOrg; loc: PublicLoc; svc: PublicSvc
   onSelect: (slot: TimeSlot, date: Date) => void
@@ -353,7 +353,7 @@ function StepDateTime({
                   src={emp.avatar}
                   alt={emp.name}
                   className="w-12 h-12 rounded-full object-cover ring-2 ring-offset-2 ring-offset-card transition-all"
-                  style={{ ringColor: selectedEmpId === emp.id ? 'hsl(var(--primary))' : 'transparent' }}
+                  style={{ '--tw-ring-color': selectedEmpId === emp.id ? 'hsl(var(--primary))' : 'transparent' } as React.CSSProperties}
                 />
               ) : (
                 <div className={cn(

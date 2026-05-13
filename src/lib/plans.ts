@@ -1,5 +1,3 @@
-import type { Organization } from '@/models'
-
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 export type Plan = 'basic' | 'pro' | 'premium' | 'enterprise'
 

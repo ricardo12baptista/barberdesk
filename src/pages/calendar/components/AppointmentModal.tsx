@@ -59,7 +59,7 @@ export function AppointmentModal({ open, onClose, appointment, prefill }: Props)
         startTime:  format(d, 'HH:mm'),
         status:     appointment.status,
         notes:      appointment.notes ?? '',
-        price:      appointment.price,
+        price:      appointment.price ?? 0,
       })
     } else if (prefill) {
       const d = new Date(prefill.startsAt)

@@ -23,8 +23,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   setTotals: (barbers, locations) => set({ totalBarbers: barbers, totalLocations: locations }),
 
-  // Solo owner = super_admin with 0 or 1 barbers (just themselves)
-  isSoloOwner: (role: string) => role === 'super_admin' && get().totalBarbers <= 1,
+  // Solo owner = super_admin with a single-location org and 0 or 1 barbers.
+  isSoloOwner: (role: string) =>
+    role === 'super_admin' && get().totalLocations === 1 && get().totalBarbers <= 1,
 
   canAddBarber:   (plan) => canAddBarber(plan, get().totalBarbers),
   canAddLocation: (plan) => canAddLocation(plan, get().totalLocations),

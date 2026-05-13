@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { X, User, Mail, Lock, Phone, Percent, Scissors } from 'lucide-react'
 import { useCreateEmployee, useServices } from '@/hooks'
 import { Button } from '@/components/ui'
@@ -45,8 +45,18 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Decompose name into firstName and lastName
+    const nameParts = form.name.trim().split(/\s+/)
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
+
     await createEmployee.mutateAsync({
-      name:              form.name,
+      firstName,
+      lastName,
+      email:             form.email,
+      phone:             form.phone,
+      password:          form.password,
       locationId,
       commissionPercent: form.commissionPercent,
       serviceIds:        form.serviceIds,
@@ -244,5 +254,3 @@ function Field({ label, icon: Icon, required, children }: {
     </div>
   )
 }
-
-import { ReactNode } from 'react'

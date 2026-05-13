@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Users, Plus, Phone, Percent, Star, MoreVertical, UserCheck, UserX } from 'lucide-react'
+import { Users, Plus, Percent, MoreVertical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEmployees, useServices, useCreateEmployee } from '@/hooks'
+import { useEmployees, useServices } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
-import { useAppStore } from '@/stores/app.store'
 import { PageHeader, Card, CardContent, Badge, Avatar, Button, EmptyState, Spinner } from '@/components/ui'
-import { PlanGate, UpsellBanner } from '@/components/ui/PlanGate'
+import { UpsellBanner } from '@/components/ui/PlanGate'
 import { PLANS, canAddBarber } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 import { CreateEmployeeModal } from './components/CreateEmployeeModal'
@@ -17,7 +16,6 @@ export function EmployeesPage() {
   const { t } = useTranslation()
   const { user, organization } = useAuthStore()
   const { activeLocation } = useUIStore()
-  const { totalBarbers } = useAppStore()
   const locationId = activeLocation?.id ?? user?.locationId ?? 'loc-1'
   const plan = (organization?.plan ?? 'basic') as Plan
 
@@ -125,8 +123,6 @@ export function EmployeesPage() {
 
 // ─── Employee Card ─────────────────────────────────────────────────────────────
 function EmployeeCard({ employee, isSelf, onClick, serviceMap }: { employee: Employee; isSelf: boolean; onClick: () => void; serviceMap: Record<string, { name: string; color: string }> }) {
-  const { t } = useTranslation()
-
   return (
     <Card
       className="cursor-pointer hover:border-primary/30 hover:shadow-md transition-all group"

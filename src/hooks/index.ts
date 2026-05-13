@@ -8,9 +8,10 @@ import {
   servicesApi,
   commissionApi,
   AppointmentFilters,
+  CreateEmployeeData,
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
-import type { Appointment, AppointmentStatus, Client, Employee, Location, Service } from '@/models'
+import type { Appointment, AppointmentStatus, Client, Location, Service } from '@/models'
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 export const qk = {
@@ -34,7 +35,7 @@ export const useLocations = () => {
   const orgId = organization?.id
   return useQuery({
     queryKey: qk.locations(orgId),
-    queryFn:  () => locationsApi.getAll(orgId).then(r => r.data),
+    queryFn:  () => locationsApi.getAll().then(r => r.data),
     enabled:  !!orgId,
   })
 }
@@ -83,7 +84,7 @@ export const useServices = () => {
   const orgId = organization?.id
   return useQuery({
     queryKey: qk.services(orgId),
-    queryFn:  () => servicesApi.getAll(orgId).then(r => r.data),
+    queryFn:  () => servicesApi.getAll().then(r => r.data),
     enabled:  !!orgId,
   })
 }
@@ -112,7 +113,7 @@ export const useUpdateService = () => {
 export const useAppointments = (filters?: AppointmentFilters) => {
   const { organization } = useAuthStore()
   // Always scope appointments to the current org to prevent cross-org data leaks
-  const scopedFilters = { ...filters, organizationId: organization?.id }
+  const scopedFilters = { ...filters }
   return useQuery({
     queryKey: qk.appointments(scopedFilters),
     queryFn:  () => appointmentsApi.getAll(scopedFilters).then(r => r.data),
@@ -190,7 +191,7 @@ export const useCreateLocation = () => {
 export const useCreateEmployee = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<Employee>) => employeesApi.create(data).then(r => r.data),
+    mutationFn: (data: CreateEmployeeData) => employeesApi.create(data).then(r => r.data),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['employees'] }),
   })
 }
@@ -209,14 +210,14 @@ export const useDeleteService = () => {
 export const useAllServices = () =>
   useQuery({
     queryKey: ['services', 'all'],
-    queryFn:  () => servicesApi.getAll(undefined).then(r => r.data),
+    queryFn:  () => servicesApi.getAll().then(r => r.data),
   })
 
 // Fetch ALL locations across all orgs — used by super_admin for name resolution
 export const useAllLocations = () =>
   useQuery({
     queryKey: ['locations', 'all'],
-    queryFn:  () => locationsApi.getAll(undefined).then(r => r.data),
+    queryFn:  () => locationsApi.getAll().then(r => r.data),
   })
 
 // Fetch ALL clients without pagination — used for name resolution in appointments etc.

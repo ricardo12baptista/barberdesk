@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PageHeader, Card, CardContent, EmptyState } from '@/components/ui'
 import { CalendarDays, Users, BarChart3, Building2, TrendingUp, Settings, FileText } from 'lucide-react'
 
-function PlaceholderPage({ titleKey, descKey, icon: Icon }: { titleKey: string; descKey: string; icon: React.ElementType }) {
+function PlaceholderPage({ titleKey, icon: Icon }: { titleKey: string; icon: React.ElementType }) {
   const { t } = useTranslation()
   return (
     <div>
@@ -22,39 +22,38 @@ function PlaceholderPage({ titleKey, descKey, icon: Icon }: { titleKey: string; 
 }
 
 export function CalendarPage() {
-  return <PlaceholderPage titleKey="nav.calendar" descKey="" icon={CalendarDays} />
+  return <PlaceholderPage titleKey="nav.calendar" icon={CalendarDays} />
 }
 
 export function AppointmentsPage() {
-  return <PlaceholderPage titleKey="nav.appointments" descKey="" icon={FileText} />
+  return <PlaceholderPage titleKey="nav.appointments" icon={FileText} />
 }
 
 export function EmployeesPage() {
-  return <PlaceholderPage titleKey="nav.employees" descKey="" icon={Users} />
+  return <PlaceholderPage titleKey="nav.employees" icon={Users} />
 }
 
 export function ServicesPage() {
-  return <PlaceholderPage titleKey="nav.services" descKey="" icon={BarChart3} />
+  return <PlaceholderPage titleKey="nav.services" icon={BarChart3} />
 }
 
 export function FinancialPage() {
-  return <PlaceholderPage titleKey="nav.financial" descKey="" icon={TrendingUp} />
+  return <PlaceholderPage titleKey="nav.financial" icon={TrendingUp} />
 }
 
 export function ReportsPage() {
-  return <PlaceholderPage titleKey="nav.reports" descKey="" icon={BarChart3} />
+  return <PlaceholderPage titleKey="nav.reports" icon={BarChart3} />
 }
 
 export function LocationsPage() {
-  return <PlaceholderPage titleKey="nav.locations" descKey="" icon={Building2} />
+  return <PlaceholderPage titleKey="nav.locations" icon={Building2} />
 }
 
 export function SettingsPage() {
-  return <PlaceholderPage titleKey="nav.settings" descKey="" icon={Settings} />
+  return <PlaceholderPage titleKey="nav.settings" icon={Settings} />
 }
 
 export function NotFoundPage() {
-  const { t } = useTranslation()
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center animate-fade-in">

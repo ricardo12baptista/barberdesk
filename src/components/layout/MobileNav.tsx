@@ -1,8 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CalendarDays, CalendarCheck2, UserCircle, Users,
-  Scissors, TrendingUp, BarChart3, MapPin, Star, CalendarCheck,
-  MoreHorizontal, LogOut, Settings, X, CalendarClock,
+  Scissors, TrendingUp, BarChart3, MapPin, Star,
+  MoreHorizontal, LogOut, Settings, CalendarClock,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -88,7 +88,6 @@ function MoreDrawer({ items, onClose }: { items: Tab[]; onClose: () => void }) {
 export function MobileNav() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
-  const { activeLocation } = useUIStore()
   const { totalBarbers } = useAppStore()
   const { data: locations = [] } = useLocations()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -99,7 +98,7 @@ export function MobileNav() {
   const isManager    = user.role === 'manager'
   const isPartner    = user.role === 'partner'
   const isEmployee   = user.role === 'employee'
-  const isSoloOwner  = isSuperAdmin && locations.length > 0 && totalBarbers <= 1
+  const isSoloOwner  = isSuperAdmin && locations.length === 1 && totalBarbers <= 1
 
   // ── Primary tabs (shown in bottom bar) ─────────────────────────────────────
   // ── Overflow items (shown in "Mais" drawer) ─────────────────────────────────
