@@ -56,7 +56,9 @@ export function DashboardPage() {
     : undefined
 
   const { data: summary, isLoading: summaryLoading } = useAnalyticsSummary(effectiveLocationId)
-  const { data: trend, isLoading: trendLoading } = useRevenueTrend(effectiveLocationId)
+  const trendResponse = useRevenueTrend(effectiveLocationId)
+  const trend = (trendResponse.data as any)?.data ?? []
+  const { isLoading: trendLoading } = trendResponse
   const safeTrend = Array.isArray(trend) ? trend : []
   const today = format(new Date(), 'yyyy-MM-dd')
   const { data: todayApts, isLoading: aptsLoading } = useAppointments({
@@ -135,14 +137,14 @@ export function DashboardPage() {
 
           {!isEmployee && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle>{t('dashboard.revenueThisWeek')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {trendLoading ? <Spinner /> : (
                     <ResponsiveContainer width="100%" height={200}>
-                      <AreaChart data={safeTrend} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                      <AreaChart data={safeTrend} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%"  stopColor="hsl(25,90%,52%)" stopOpacity={0.2} />
@@ -192,7 +194,7 @@ export function DashboardPage() {
                   <div className="mt-4">
                     <p className="text-xs text-muted-foreground font-body mb-2">Marcações por dia</p>
                     <ResponsiveContainer width="100%" height={100}>
-                      <BarChart data={safeTrend} margin={{ top: 0, right: 0, left: -32, bottom: 0 }}>
+                      <BarChart data={safeTrend} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                         <Bar dataKey="appointments" fill="hsl(25,90%,52%)" radius={[3, 3, 0, 0]} />
                         <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
                       </BarChart>

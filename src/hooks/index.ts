@@ -25,7 +25,7 @@ export const qk = {
   availableSlots: (employeeId?: string, date?: string, slotDuration?: number) => 
     ['appointments', 'available-slots', employeeId, date, slotDuration] as const,
   summary:      (locationId?: string) => ['analytics', 'summary', locationId] as const,
-  revenueTrend: (locationId?: string) => ['analytics', 'revenue-trend', locationId] as const,
+  revenueTrend: (locationId?: string, period?: string, refDate?: string) => ['analytics', 'revenue-trend', locationId, period, refDate] as const,
 }
 
 // ─── Locations ────────────────────────────────────────────────────────────────
@@ -173,10 +173,10 @@ export const useAnalyticsSummary = (locationId?: string) =>
     staleTime: 1000 * 60 * 5,
   })
 
-export const useRevenueTrend = (locationId?: string) =>
+export const useRevenueTrend = (locationId?: string, period?: string, refDate?: string) =>
   useQuery({
-    queryKey: qk.revenueTrend(locationId),
-    queryFn:  () => analyticsApi.getRevenueTrend(locationId).then(r => r.data),
+    queryKey: qk.revenueTrend(locationId, period, refDate),
+    queryFn:  () => analyticsApi.getRevenueTrend(locationId, period, refDate).then(r => r.data),
   })
 
 // ─── Location / Employee mutations ────────────────────────────────────────────

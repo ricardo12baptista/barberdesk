@@ -147,6 +147,7 @@ export interface RevenueDataPoint {
   date: string
   revenue: number
   appointments: number
+  label?: string
 }
 
 

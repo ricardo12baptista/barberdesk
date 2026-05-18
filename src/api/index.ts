@@ -131,8 +131,8 @@ export const appointmentsApi = {
 export const analyticsApi = {
   getSummary:      (locationId?: string) =>
     apiClient.get('/analytics/summary', { params: { locationId } }),
-  getRevenueTrend: (locationId?: string) =>
-    apiClient.get('/analytics/revenue-trend', { params: { locationId } }),
+  getRevenueTrend: (locationId?: string, period?: string, refDate?: string) =>
+    apiClient.get('/analytics/revenue-trend', { params: { locationId, period, refDate } }),
 }
 
 // ─── Commission ────────────────────────────────────────────────────────────────
