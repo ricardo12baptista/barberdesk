@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 //import type { LocationSettings } from '@/models'
+import type { Appointment } from '@/models'
 import {
   mockOrganizations,
   mockLocations,
@@ -222,6 +223,23 @@ export const handlers = [
     return apt
       ? HttpResponse.json({ ...apt, ...body })
       : HttpResponse.json({ message: 'Not found' }, { status: 404 })
+  }),
+
+  // ✅ Rota específica para mudar status (usada pelo useUpdateAppointmentStatus)
+  http.patch(`${API}/appointments/:id/status`, async ({ params, request }) => {
+    await delay(DELAY)
+    const { status } = (await request.json()) as { status: string }
+    const normalized = status?.toLowerCase()
+    const valid = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']
+    if (!valid.includes(normalized)) {
+      return HttpResponse.json({ message: 'Status inválido' }, { status: 400 })
+    }
+    const apt = mockAppointments.find(a => a.id === params.id)
+    if (!apt) {
+      return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    }
+    apt.status = normalized as Appointment['status']
+    return HttpResponse.json({ ...apt })
   }),
 
   http.delete(`${API}/appointments/:id`, async () => {

@@ -189,6 +189,40 @@ export const emps4: Employee[] = [
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// CENÁRIO 5 — BarberDesk Demo (Premium)
+// Espelha o seed do backend (admin@barberdesk.com)
+// 1 super_admin NÃO barbeiro + 1 gestor + 2 lojas + 3 barbeiros
+// ═══════════════════════════════════════════════════════════════════════════════
+export const org5: Organization = {
+  id: 'org-5', name: 'BarberDesk Demo', slug: 'barberdesk-demo',
+  plan: 'premium', createdAt: '2024-01-01T10:00:00Z',
+}
+
+export const locs5: Location[] = [
+  { id: 'loc-5a', organizationId: 'org-5', name: 'Lisboa Centro', address: 'Rua Augusta, 100', city: 'Lisboa', phone: '+351210000000', email: 'centro@barberdesk.com', timezone: 'Europe/Lisbon', isActive: true, createdAt: '2024-01-01T10:00:00Z' },
+  { id: 'loc-5b', organizationId: 'org-5', name: 'Lisboa Belém',  address: 'Rua de Belém, 200', city: 'Lisboa', phone: '+351220000000', email: 'belem@barberdesk.com',    timezone: 'Europe/Lisbon', isActive: true, createdAt: '2024-02-01T10:00:00Z' },
+]
+
+export const users5: User[] = [
+  // Super Admin — sem locationId, sem Employee
+  { id: 'u5-admin',   organizationId: 'org-5', locationId: null,    name: 'Ricardo Admin', email: 'admin@barberdesk.com',    role: 'super_admin', isActive: true, createdAt: '2024-01-01T10:00:00Z' },
+  // Gestor
+  { id: 'u5-mgr',     organizationId: 'org-5', locationId: 'loc-5a', name: 'Ana Gestora',  email: 'gestor@barberdesk.com',   role: 'manager',     isActive: true, createdAt: '2024-01-01T10:00:00Z' },
+  // Barbeiros Lisboa Centro
+  { id: 'u5-emp-1',   organizationId: 'org-5', locationId: 'loc-5a', name: 'João Silva',   email: 'joao@barberdesk.com',     role: 'employee',    isActive: true, createdAt: '2024-01-01T10:00:00Z' },
+  { id: 'u5-emp-2',   organizationId: 'org-5', locationId: 'loc-5a', name: 'Maria Santos', email: 'maria@barberdesk.com',    role: 'employee',    isActive: true, createdAt: '2024-01-15T10:00:00Z' },
+  // Barbeiros Lisboa Belém
+  { id: 'u5-emp-3',   organizationId: 'org-5', locationId: 'loc-5b', name: 'Tiago Almeida',email: 'tiago@barberdesk.com',    role: 'employee',    isActive: true, createdAt: '2024-02-01T10:00:00Z' },
+]
+
+export const emps5: Employee[] = [
+  { id: 'e5-1', userId: 'u5-emp-1', locationId: 'loc-5a', name: 'João Silva',   serviceIds: ['svc-5-1', 'svc-5-3'], commissionPercent: 45, isActive: true },
+  { id: 'e5-2', userId: 'u5-emp-2', locationId: 'loc-5a', name: 'Maria Santos', serviceIds: ['svc-5-2', 'svc-5-3'], commissionPercent: 40, isActive: true },
+  { id: 'e5-3', userId: 'u5-emp-3', locationId: 'loc-5b', name: 'Tiago Almeida',serviceIds: ['svc-5-1', 'svc-5-2', 'svc-5-3'], commissionPercent: 45, isActive: true },
+]
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // CREDENCIAIS DE ACESSO — todos os cenários
 // ═══════════════════════════════════════════════════════════════════════════════
 export const mockCredentials = [
@@ -207,16 +241,22 @@ export const mockCredentials = [
   { email: 'marco@cortefino.pt',     password: 'emp123',      userId: 'u3-emp-1'  },  // Barbeiro
   // ── Cenário 4: Barbearia do Zé ──
   { email: 'ze@barbeariadoze.pt',    password: 'admin123',    userId: 'u4-owner'  },  // Solo
+  // ── Cenário 5: BarberDesk Demo ──
+  { email: 'admin@barberdesk.com',   password: 'admin123',    userId: 'u5-admin'  },  // Super Admin
+  { email: 'gestor@barberdesk.com',  password: 'gestor123',   userId: 'u5-mgr'    },  // Gestora
+  { email: 'joao@barberdesk.com',    password: 'joao123',     userId: 'u5-emp-1'  },  // Barbeiro Lisboa Centro
+  { email: 'maria@barberdesk.com',   password: 'maria123',    userId: 'u5-emp-2'  },  // Barbeiro Lisboa Centro
+  { email: 'tiago@barberdesk.com',   password: 'tiago123',    userId: 'u5-emp-3'  },  // Barbeiro Lisboa Belém
 ]
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DADOS AGREGADOS (para os handlers MSW)
 // ═══════════════════════════════════════════════════════════════════════════════
-export const mockOrganizations = [org1, org2, org3, org4]
-export const mockLocations     = [...locs1, ...locs2, ...locs3, ...locs4]
-export const mockUsers         = [...users1, ...users2, ...users3, ...users4]
-export const mockEmployees     = [...emps1, ...emps2, ...emps3, ...emps4]
+export const mockOrganizations = [org1, org2, org3, org4, org5]
+export const mockLocations     = [...locs1, ...locs2, ...locs3, ...locs4, ...locs5]
+export const mockUsers         = [...users1, ...users2, ...users3, ...users4, ...users5]
+export const mockEmployees     = [...emps1, ...emps2, ...emps3, ...emps4, ...emps5]
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +284,10 @@ export const mockServices: Service[] = [
   { id: 'svc-4-1', organizationId: 'org-4', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 12, category: 'hair',      isActive: true, color: '#6366f1' },
   { id: 'svc-4-2', organizationId: 'org-4', name: 'Barba',              durationMinutes: 20, basePrice:  8, category: 'beard',     isActive: true, color: '#f59e0b' },
   { id: 'svc-4-3', organizationId: 'org-4', name: 'Corte + Barba',      durationMinutes: 50, basePrice: 18, category: 'combo',     isActive: true, color: '#22c55e' },
+  // Org 5 — BarberDesk Demo
+  { id: 'svc-5-1', organizationId: 'org-5', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 15, category: 'hair',      isActive: true, color: '#6366f1' },
+  { id: 'svc-5-2', organizationId: 'org-5', name: 'Barba Completa',     durationMinutes: 30, basePrice: 12, category: 'beard',     isActive: true, color: '#f59e0b' },
+  { id: 'svc-5-3', organizationId: 'org-5', name: 'Corte + Barba',      durationMinutes: 60, basePrice: 25, category: 'combo',     isActive: true, color: '#22c55e' },
 ]
 
 
@@ -269,75 +313,125 @@ export const mockClients: Client[] = [
   { id: 'cli-4-1', organizationId: 'org-4', name: 'Leonel Teixeira',   phone: '+351 940 004 001', tags: ['loyal'],  loyaltyPoints: 140, createdAt: '2024-03-10T10:00:00Z' },
   { id: 'cli-4-2', organizationId: 'org-4', name: 'Manuel Correia',    phone: '+351 940 004 002', tags: ['vip'],    loyaltyPoints: 200, createdAt: '2024-03-15T10:00:00Z' },
   { id: 'cli-4-3', organizationId: 'org-4', name: 'Norberto Gomes',    phone: '+351 940 004 003', tags: ['new'],    loyaltyPoints:   5, createdAt: '2024-05-01T10:00:00Z' },
+  // Org 5 — BarberDesk Demo
+  { id: 'cli-5-1', organizationId: 'org-5', name: 'Carlos Andrade',    phone: '+351 960 005 001', tags: ['vip'],    loyaltyPoints: 920, createdAt: '2024-02-01T10:00:00Z' },
+  { id: 'cli-5-2', organizationId: 'org-5', name: 'Diogo Nascimento',  phone: '+351 960 005 002', tags: ['loyal'],  loyaltyPoints: 410, createdAt: '2024-03-10T10:00:00Z' },
+  { id: 'cli-5-3', organizationId: 'org-5', name: 'Eduardo Campos',    phone: '+351 960 005 003', tags: ['loyal'],  loyaltyPoints: 320, createdAt: '2024-04-05T10:00:00Z' },
+  { id: 'cli-5-4', organizationId: 'org-5', name: 'Fábio Lourenço',    phone: '+351 960 005 004', tags: ['new'],    loyaltyPoints:  40, createdAt: '2025-01-10T10:00:00Z' },
+  { id: 'cli-5-5', organizationId: 'org-5', name: 'Gustavo Pereira',   phone: '+351 960 005 005', tags: ['vip'],    loyaltyPoints: 780, createdAt: '2024-05-20T10:00:00Z' },
 ]
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARCAÇÕES de hoje — por cenário
+// MARCAÇÕES — geradas dinamicamente baseadas na hora atual
+// Para garantir que há sempre appointments futuros para testar ações
 // ─────────────────────────────────────────────────────────────────────────────
+const now = new Date()
+const currentHour = now.getHours()
+
+// Cria uma data ISO para hoje a uma hora específica
+// Se a hora já passou (+ margem), coloca o appointment no passado (completed)
+// Se a hora está próxima ou futura, mantém o status pretendido
+function makeApt(hour: number, minute: number): string {
+  const dt = new Date(today)
+  dt.setHours(hour, minute, 0, 0)
+  return dt.toISOString()
+}
+
+function isPast(hour: number, minute = 0): boolean {
+  return hour < currentHour || (hour === currentHour && minute <= now.getMinutes())
+}
+
+// Gera status realistas baseados na hora
+function pastStatus(): 'completed' | 'no_show' {
+  return Math.random() < 0.85 ? 'completed' : 'no_show'
+}
+
+function futureStatus(): 'confirmed' | 'pending' {
+  return Math.random() < 0.7 ? 'confirmed' : 'pending'
+}
+
 export const mockAppointments: Appointment[] = [
   // ── Cenário 1 — Lisboa Baixa (e1-1: Tiago, e1-2: Gonçalo) ──
-  { id: 'apt-1-1', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: 'completed',   startsAt: d(9,  0), endsAt: d(9,  30), price: 15, createdAt: d(8,0) },
-  { id: 'apt-1-2', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-2', serviceId: 'svc-1-4', status: 'confirmed',   startsAt: d(10, 0), endsAt: d(11,  0), price: 25, createdAt: d(9,0) },
-  { id: 'apt-1-3', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-5', serviceId: 'svc-1-2', status: 'pending',     startsAt: d(14, 0), endsAt: d(14, 45), price: 18, createdAt: d(12,0) },
-  { id: 'apt-1-4', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-3', serviceId: 'svc-1-3', status: 'confirmed',   startsAt: d(9, 30), endsAt: d(10,  0), price: 12, createdAt: d(8,0) },
-  { id: 'apt-1-5', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-4', serviceId: 'svc-1-2', status: 'in_progress', startsAt: d(11, 0), endsAt: d(11, 45), price: 18, createdAt: d(10,0) },
-  { id: 'apt-1-6', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-6', serviceId: 'svc-1-1', status: 'no_show',     startsAt: d(13, 0), endsAt: d(13, 30), price: 15, createdAt: d(11,0) },
+  { id: 'apt-1-1', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(9,  30),  price: 15 },
+  { id: 'apt-1-2', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-2', serviceId: 'svc-1-4', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0),  endsAt: makeApt(11,  0),  price: 25 },
+  { id: 'apt-1-3', locationId: 'loc-1a', employeeId: 'e1-1', clientId: 'cli-1-5', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 45), price: 18 },
+  { id: 'apt-1-4', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-3', serviceId: 'svc-1-3', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30),  endsAt: makeApt(10,  0),  price: 12 },
+  { id: 'apt-1-5', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-4', serviceId: 'svc-1-2', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 45),  price: 18 },
+  { id: 'apt-1-6', locationId: 'loc-1a', employeeId: 'e1-2', clientId: 'cli-1-6', serviceId: 'svc-1-1', status: isPast(13, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(13, 0),  endsAt: makeApt(13, 30),  price: 15 },
   // ── Cenário 1 — Parque das Nações (e1-3: Miguel, e1-4: Rui) ──
-  { id: 'apt-1b-1', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-1', serviceId: 'svc-1-4', status: 'completed',   startsAt: d(9,  0), endsAt: d(10,  0), price: 25, createdAt: d(8,0) },
-  { id: 'apt-1b-2', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-2', serviceId: 'svc-1-2', status: 'confirmed',   startsAt: d(10, 30), endsAt: d(11, 15), price: 18, createdAt: d(9,0) },
-  { id: 'apt-1b-3', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-5', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(14, 0), endsAt: d(14, 30), price: 15, createdAt: d(12,0) },
-  { id: 'apt-1b-4', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-6', serviceId: 'svc-1-5', status: 'pending',     startsAt: d(16, 0), endsAt: d(16, 45), price: 20, createdAt: d(14,0) },
-  { id: 'apt-1b-5', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-3', serviceId: 'svc-1-2', status: 'completed',   startsAt: d(9, 15), endsAt: d(10,  0), price: 18, createdAt: d(8,0) },
-  { id: 'apt-1b-6', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-4', serviceId: 'svc-1-3', status: 'no_show',     startsAt: d(11, 0), endsAt: d(11, 30), price: 12, createdAt: d(10,0) },
-  { id: 'apt-1b-7', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(15, 0), endsAt: d(15, 30), price: 15, createdAt: d(13,0) },
+  { id: 'apt-1b-1', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-1', serviceId: 'svc-1-4', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(10,  0),  price: 25 },
+  { id: 'apt-1b-2', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-2', serviceId: 'svc-1-2', status: isPast(10, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 30), endsAt: makeApt(11, 15),  price: 18 },
+  { id: 'apt-1b-3', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-5', serviceId: 'svc-1-1', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 30), price: 15 },
+  { id: 'apt-1b-4', locationId: 'loc-1b', employeeId: 'e1-3', clientId: 'cli-1-6', serviceId: 'svc-1-5', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 45), price: 20 },
+  { id: 'apt-1b-5', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-3', serviceId: 'svc-1-2', status: isPast(9, 15) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 15),  endsAt: makeApt(10,  0),  price: 18 },
+  { id: 'apt-1b-6', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-4', serviceId: 'svc-1-3', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 30),  price: 12 },
+  { id: 'apt-1b-7', locationId: 'loc-1b', employeeId: 'e1-4', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: futureStatus(), startsAt: makeApt(currentHour >= 15 ? 15 : 13, 0), endsAt: makeApt(currentHour >= 15 ? 15 : 13, 30), price: 15 },
   // ── Cenário 1 — Porto Aliados (e1-5: Filipe, e1-6: Carlos) ──
-  { id: 'apt-1c-1', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: 'completed',   startsAt: d(9,  0), endsAt: d(9,  30), price: 15, createdAt: d(8,0) },
-  { id: 'apt-1c-2', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-5', serviceId: 'svc-1-4', status: 'completed',   startsAt: d(10, 0), endsAt: d(11,  0), price: 25, createdAt: d(9,0) },
-  { id: 'apt-1c-3', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-3', serviceId: 'svc-1-2', status: 'confirmed',   startsAt: d(14, 0), endsAt: d(14, 45), price: 18, createdAt: d(12,0) },
-  { id: 'apt-1c-4', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-6', serviceId: 'svc-1-3', status: 'pending',     startsAt: d(16, 30), endsAt: d(17, 0), price: 12, createdAt: d(15,0) },
-  { id: 'apt-1c-5', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-1', serviceId: 'svc-1-2', status: 'confirmed',   startsAt: d(9, 30), endsAt: d(10, 15), price: 18, createdAt: d(8,0) },
-  { id: 'apt-1c-6', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-4', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(11, 0), endsAt: d(11, 30), price: 15, createdAt: d(10,0) },
-  { id: 'apt-1c-7', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: 'completed',   startsAt: d(13, 0), endsAt: d(13, 30), price: 12, createdAt: d(11,0) },
+  { id: 'apt-1c-1', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(9,  30),  price: 15 },
+  { id: 'apt-1c-2', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-5', serviceId: 'svc-1-4', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0),  endsAt: makeApt(11,  0),  price: 25 },
+  { id: 'apt-1c-3', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-3', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 45), price: 18 },
+  { id: 'apt-1c-4', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-6', serviceId: 'svc-1-3', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 30), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), price: 12 },
+  { id: 'apt-1c-5', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-1', serviceId: 'svc-1-2', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30),  endsAt: makeApt(10, 15),  price: 18 },
+  { id: 'apt-1c-6', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-4', serviceId: 'svc-1-1', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 30),  price: 15 },
+  { id: 'apt-1c-7', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: isPast(13, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(13, 0),  endsAt: makeApt(13, 30),  price: 12 },
   // ── Cenário 1 — Porto Foz (e1-7: Nuno, e1-8: Pedro) ──
-  { id: 'apt-1d-1', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-3', serviceId: 'svc-1-4', status: 'completed',   startsAt: d(9,  0), endsAt: d(10,  0), price: 25, createdAt: d(8,0) },
-  { id: 'apt-1d-2', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-5', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(10, 30), endsAt: d(11, 0), price: 15, createdAt: d(9,0) },
-  { id: 'apt-1d-3', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-1', serviceId: 'svc-1-3', status: 'confirmed',   startsAt: d(14, 0), endsAt: d(14, 30), price: 12, createdAt: d(12,0) },
-  { id: 'apt-1d-4', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-6', serviceId: 'svc-1-2', status: 'pending',     startsAt: d(15, 30), endsAt: d(16, 15), price: 18, createdAt: d(14,0) },
-  { id: 'apt-1d-5', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-4', serviceId: 'svc-1-6', status: 'completed',   startsAt: d(9, 30), endsAt: d(9,  45), price:  8, createdAt: d(8,0) },
-  { id: 'apt-1d-6', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(11, 0), endsAt: d(11, 30), price: 15, createdAt: d(10,0) },
-  { id: 'apt-1d-7', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-5', serviceId: 'svc-1-3', status: 'no_show',     startsAt: d(13, 0), endsAt: d(13, 30), price: 12, createdAt: d(11,0) },
+  { id: 'apt-1d-1', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-3', serviceId: 'svc-1-4', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(10,  0),  price: 25 },
+  { id: 'apt-1d-2', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-5', serviceId: 'svc-1-1', status: isPast(10, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 30), endsAt: makeApt(11,  0),  price: 15 },
+  { id: 'apt-1d-3', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-1', serviceId: 'svc-1-3', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 30), price: 12 },
+  { id: 'apt-1d-4', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-6', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 15 ? 15 : 14, 30), endsAt: makeApt(currentHour >= 15 ? 15 : 14, 15), price: 18 },
+  { id: 'apt-1d-5', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-4', serviceId: 'svc-1-6', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30),  endsAt: makeApt(9,  45),  price:  8 },
+  { id: 'apt-1d-6', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 30),  price: 15 },
+  { id: 'apt-1d-7', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-5', serviceId: 'svc-1-3', status: isPast(13, 0) ? 'no_show' : 'confirmed',     startsAt: makeApt(13, 0),  endsAt: makeApt(13, 30),  price: 12 },
   // ── Cenário 1 — Braga Centro (e1-9: Diogo, e1-10: Luís) ──
-  { id: 'apt-1e-1', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-1', serviceId: 'svc-1-2', status: 'completed',   startsAt: d(9,  0), endsAt: d(9,  45), price: 18, createdAt: d(8,0) },
-  { id: 'apt-1e-2', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-3', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(10, 0), endsAt: d(10, 30), price: 15, createdAt: d(9,0) },
-  { id: 'apt-1e-3', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-5', serviceId: 'svc-1-4', status: 'confirmed',   startsAt: d(14, 0), endsAt: d(15,  0), price: 25, createdAt: d(12,0) },
-  { id: 'apt-1e-4', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-6', serviceId: 'svc-1-5', status: 'pending',     startsAt: d(16, 0), endsAt: d(16, 45), price: 20, createdAt: d(15,0) },
-  { id: 'apt-1e-5', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: 'completed',   startsAt: d(9, 15), endsAt: d(9,  45), price: 12, createdAt: d(8,0) },
-  { id: 'apt-1e-6', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-4', serviceId: 'svc-1-2', status: 'confirmed',   startsAt: d(11, 0), endsAt: d(11, 45), price: 18, createdAt: d(10,0) },
-  { id: 'apt-1e-7', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: 'confirmed',   startsAt: d(13, 30), endsAt: d(14, 0), price: 15, createdAt: d(12,0) },
+  { id: 'apt-1e-1', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-1', serviceId: 'svc-1-2', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(9,  45),  price: 18 },
+  { id: 'apt-1e-2', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-3', serviceId: 'svc-1-1', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0),  endsAt: makeApt(10, 30),  price: 15 },
+  { id: 'apt-1e-3', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-5', serviceId: 'svc-1-4', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), price: 25 },
+  { id: 'apt-1e-4', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-6', serviceId: 'svc-1-5', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 45), price: 20 },
+  { id: 'apt-1e-5', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: isPast(9, 15) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 15),  endsAt: makeApt(9,  45),  price: 12 },
+  { id: 'apt-1e-6', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-4', serviceId: 'svc-1-2', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 45),  price: 18 },
+  { id: 'apt-1e-7', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: futureStatus(), startsAt: makeApt(currentHour >= 13 ? 13 : 11, 30), endsAt: makeApt(currentHour >= 13 ? 13 : 11, 0), price: 15 },
   // ── Cenário 2 — Porto Boavista (e2-owner: João, e2-1: Fábio) ──
-  { id: 'apt-2-1', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-1', serviceId: 'svc-2-1', status: 'completed', startsAt: d(9,  0), endsAt: d(9,  30), price: 16, createdAt: d(8,0) },
-  { id: 'apt-2-2', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-2', serviceId: 'svc-2-4', status: 'confirmed', startsAt: d(10, 0), endsAt: d(10, 55), price: 26, createdAt: d(9,0) },
-  { id: 'apt-2-3', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-3', serviceId: 'svc-2-2', status: 'pending',   startsAt: d(15, 0), endsAt: d(15, 45), price: 20, createdAt: d(12,0) },
-  { id: 'apt-2-4', locationId: 'loc-2a', employeeId: 'e2-1',     clientId: 'cli-2-1', serviceId: 'svc-2-3', status: 'confirmed', startsAt: d(9, 30), endsAt: d(9,  55), price: 12, createdAt: d(8,0) },
-  { id: 'apt-2-5', locationId: 'loc-2a', employeeId: 'e2-1',     clientId: 'cli-2-2', serviceId: 'svc-2-2', status: 'confirmed', startsAt: d(11, 0), endsAt: d(11, 45), price: 20, createdAt: d(10,0) },
+  { id: 'apt-2-1', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-1', serviceId: 'svc-2-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed', startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 16 },
+  { id: 'apt-2-2', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-2', serviceId: 'svc-2-4', status: futureStatus(), startsAt: makeApt(currentHour >= 10 ? 10 : 8, 0), endsAt: makeApt(currentHour >= 10 ? 10 : 8, 55), price: 26 },
+  { id: 'apt-2-3', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-3', serviceId: 'svc-2-2', status: futureStatus(), startsAt: makeApt(currentHour >= 15 ? 15 : 14, 0), endsAt: makeApt(currentHour >= 15 ? 15 : 14, 45), price: 20 },
+  { id: 'apt-2-4', locationId: 'loc-2a', employeeId: 'e2-1',     clientId: 'cli-2-1', serviceId: 'svc-2-3', status: isPast(9, 30) ? pastStatus() : 'confirmed', startsAt: makeApt(9, 30), endsAt: makeApt(9,  55), price: 12 },
+  { id: 'apt-2-5', locationId: 'loc-2a', employeeId: 'e2-1',     clientId: 'cli-2-2', serviceId: 'svc-2-2', status: isPast(11, 0) ? pastStatus() : 'confirmed', startsAt: makeApt(11, 0), endsAt: makeApt(11, 45), price: 20 },
   // ── Cenário 2 — Matosinhos Centro (e2-2: Vasco, e2-3: Hugo) ──
-  { id: 'apt-2b-1', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-1', serviceId: 'svc-2-4', status: 'completed',   startsAt: d(9,  0), endsAt: d(9,  55), price: 26, createdAt: d(8,0) },
-  { id: 'apt-2b-2', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-3', serviceId: 'svc-2-1', status: 'confirmed',   startsAt: d(10, 30), endsAt: d(11, 0), price: 16, createdAt: d(9,0) },
-  { id: 'apt-2b-3', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-2', serviceId: 'svc-2-2', status: 'pending',     startsAt: d(14, 0), endsAt: d(14, 45), price: 20, createdAt: d(12,0) },
-  { id: 'apt-2b-4', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-2', serviceId: 'svc-2-3', status: 'completed',   startsAt: d(9, 30), endsAt: d(9,  55), price: 12, createdAt: d(8,0) },
-  { id: 'apt-2b-5', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-1', serviceId: 'svc-2-1', status: 'confirmed',   startsAt: d(11, 0), endsAt: d(11, 30), price: 16, createdAt: d(10,0) },
-  { id: 'apt-2b-6', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-3', serviceId: 'svc-2-4', status: 'no_show',     startsAt: d(13, 0), endsAt: d(13, 55), price: 26, createdAt: d(11,0) },
+  { id: 'apt-2b-1', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-1', serviceId: 'svc-2-4', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0), endsAt: makeApt(9,  55), price: 26 },
+  { id: 'apt-2b-2', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-3', serviceId: 'svc-2-1', status: isPast(10, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 30), endsAt: makeApt(11, 0), price: 16 },
+  { id: 'apt-2b-3', locationId: 'loc-2b', employeeId: 'e2-2', clientId: 'cli-2-2', serviceId: 'svc-2-2', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 45), price: 20 },
+  { id: 'apt-2b-4', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-2', serviceId: 'svc-2-3', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30), endsAt: makeApt(9,  55), price: 12 },
+  { id: 'apt-2b-5', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-1', serviceId: 'svc-2-1', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0), endsAt: makeApt(11, 30), price: 16 },
+  { id: 'apt-2b-6', locationId: 'loc-2b', employeeId: 'e2-3', clientId: 'cli-2-3', serviceId: 'svc-2-4', status: isPast(13, 0) ? 'no_show' : 'confirmed',     startsAt: makeApt(13, 0), endsAt: makeApt(13, 55), price: 26 },
   // ── Cenário 3 — Cascais (e3-owner: Sérgio, e3-1: Marco) ──
-  { id: 'apt-3-1', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-1', serviceId: 'svc-3-1', status: 'completed',   startsAt: d(9,  0), endsAt: d(9,  30), price: 18, createdAt: d(8,0) },
-  { id: 'apt-3-2', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-2', serviceId: 'svc-3-4', status: 'confirmed',   startsAt: d(11, 0), endsAt: d(11, 55), price: 30, createdAt: d(9,0) },
-  { id: 'apt-3-3', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-1', serviceId: 'svc-3-3', status: 'pending',     startsAt: d(14, 0), endsAt: d(14, 25), price: 14, createdAt: d(12,0) },
-  { id: 'apt-3-4', locationId: 'loc-3a', employeeId: 'e3-1',     clientId: 'cli-3-2', serviceId: 'svc-3-2', status: 'in_progress', startsAt: d(10, 0), endsAt: d(10, 40), price: 22, createdAt: d(9,0) },
+  { id: 'apt-3-1', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-1', serviceId: 'svc-3-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 18 },
+  { id: 'apt-3-2', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-2', serviceId: 'svc-3-4', status: futureStatus(), startsAt: makeApt(currentHour >= 11 ? 11 : 10, 0), endsAt: makeApt(currentHour >= 11 ? 11 : 10, 55), price: 30 },
+  { id: 'apt-3-3', locationId: 'loc-3a', employeeId: 'e3-owner', clientId: 'cli-3-1', serviceId: 'svc-3-3', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 25), price: 14 },
+  { id: 'apt-3-4', locationId: 'loc-3a', employeeId: 'e3-1',     clientId: 'cli-3-2', serviceId: 'svc-3-2', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0), endsAt: makeApt(10, 40), price: 22 },
   // ── Cenário 4 — Barbearia do Zé (e4-owner: José, sozinho) ──
-  { id: 'apt-4-1', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-1', serviceId: 'svc-4-1', status: 'completed', startsAt: d(9,  0), endsAt: d(9,  30), price: 12, createdAt: d(8,0) },
-  { id: 'apt-4-2', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-2', serviceId: 'svc-4-3', status: 'confirmed', startsAt: d(10, 0), endsAt: d(10, 50), price: 18, createdAt: d(9,0) },
-  { id: 'apt-4-3', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-3', serviceId: 'svc-4-2', status: 'pending',   startsAt: d(14, 0), endsAt: d(14, 20), price:  8, createdAt: d(12,0) },
-  { id: 'apt-4-4', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-1', serviceId: 'svc-4-1', status: 'confirmed', startsAt: d(16, 0), endsAt: d(16, 30), price: 12, createdAt: d(14,0) },
+  { id: 'apt-4-1', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-1', serviceId: 'svc-4-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed', startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 12 },
+  { id: 'apt-4-2', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-2', serviceId: 'svc-4-3', status: futureStatus(), startsAt: makeApt(currentHour >= 10 ? 10 : 9, 0), endsAt: makeApt(currentHour >= 10 ? 10 : 9, 50), price: 18 },
+  { id: 'apt-4-3', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-3', serviceId: 'svc-4-2', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 20), price:  8 },
+  { id: 'apt-4-4', locationId: 'loc-4a', employeeId: 'e4-owner', clientId: 'cli-4-1', serviceId: 'svc-4-1', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 30), price: 12 },
+  // ── Cenário 5 — BarberDesk Demo (e5-1: João, e5-2: Maria, e5-3: Tiago) ──
+  // Loc5a - Emp1 (João Silva) - Lisboa Centro
+  { id: 'apt-5-1', locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-1', serviceId: 'svc-5-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed', startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 15 },
+  { id: 'apt-5-2', locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-3', serviceId: 'svc-5-3', status: isPast(10, 0) ? pastStatus() : 'confirmed', startsAt: makeApt(10, 0), endsAt: makeApt(11,  0), price: 25 },
+  { id: 'apt-5-3', locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-5', serviceId: 'svc-5-1', status: futureStatus(),                              startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 30), price: 15 },
+  // Loc5a - Emp2 (Maria Santos) - Lisboa Centro
+  { id: 'apt-5-4', locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-2', serviceId: 'svc-5-3', status: isPast(9, 30) ? pastStatus() : 'confirmed', startsAt: makeApt(9, 30), endsAt: makeApt(10, 30), price: 25 },
+  { id: 'apt-5-5', locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-4', serviceId: 'svc-5-2', status: isPast(11, 0) ? pastStatus() : 'confirmed', startsAt: makeApt(11, 0), endsAt: makeApt(11, 30), price: 12 },
+  { id: 'apt-5-6', locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-1', serviceId: 'svc-5-3', status: futureStatus(),                              startsAt: makeApt(16, 0), endsAt: makeApt(17,  0), price: 25 },
+  // Loc5b - Emp3 (Tiago Almeida) - Lisboa Belém
+  { id: 'apt-5-7', locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-3', serviceId: 'svc-5-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed', startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 15 },
+  { id: 'apt-5-8', locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-2', serviceId: 'svc-5-3', status: isPast(10, 0) ? 'no_show' : 'confirmed',   startsAt: makeApt(10, 0), endsAt: makeApt(11,  0), price: 25 },
+  { id: 'apt-5-9', locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-5', serviceId: 'svc-5-2', status: isPast(11, 30) ? pastStatus() : 'confirmed',startsAt: makeApt(11, 30), endsAt: makeApt(12, 0), price: 12 },
+  { id: 'apt-5-10',locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-4', serviceId: 'svc-5-3', status: futureStatus(),                              startsAt: makeApt(15, 0), endsAt: makeApt(16,  0), price: 25 },
+  { id: 'apt-5-11',locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-1', serviceId: 'svc-5-1', status: futureStatus(),                              startsAt: makeApt(17, 0), endsAt: makeApt(17, 30), price: 15 },
+  // ── Late appointments (always future-friendly for testing) ──
+  { id: 'apt-5-12',locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-2', serviceId: 'svc-5-1', status: futureStatus(), startsAt: makeApt(currentHour + 1, 0),  endsAt: makeApt(currentHour + 1, 30), price: 15 },
+  { id: 'apt-5-13',locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-3', serviceId: 'svc-5-2', status: futureStatus(), startsAt: makeApt(currentHour + 1, 30), endsAt: makeApt(currentHour + 2, 0), price: 12 },
 ]
 
 

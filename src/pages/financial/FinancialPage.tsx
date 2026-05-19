@@ -13,7 +13,9 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Badge, Spinner } from '@/components/ui'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
-import { format, startOfWeek, endOfWeek, subMonths, addMonths, subYears, addYears } from 'date-fns'
+import {
+  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, parseISO,
+} from 'date-fns'
 import { pt } from 'date-fns/locale'
 import type { RevenueDataPoint } from '@/models'
 
@@ -31,22 +33,13 @@ function getDayLabel(dateStr: string): string {
 }
 
 function getBarColor(dayIndex: number, total: number) {
-  // Solid orange shades from bright to muted
   const colors = [
-    'bg-orange-500',
-    'bg-orange-500',
-    'bg-orange-500',
-    'bg-orange-500/90',
-    'bg-orange-500/85',
-    'bg-orange-500/80',
-    'bg-orange-500/75',
-    'bg-orange-500/75',
-    'bg-orange-500/70',
-    'bg-orange-500/70',
-    'bg-orange-500/65',
-    'bg-orange-500/65',
-    'bg-orange-500/60',
-    'bg-orange-500/60',
+    'bg-orange-500', 'bg-orange-500', 'bg-orange-500',
+    'bg-orange-500/90', 'bg-orange-500/85', 'bg-orange-500/80',
+    'bg-orange-500/75', 'bg-orange-500/75',
+    'bg-orange-500/70', 'bg-orange-500/70',
+    'bg-orange-500/65', 'bg-orange-500/65',
+    'bg-orange-500/60', 'bg-orange-500/60',
     'bg-orange-500/55',
   ]
   return colors[dayIndex % colors.length] || 'bg-orange-500/50'
@@ -66,7 +59,6 @@ function BarChart({ data, mode, period, onHover, onTouch }: {
 
   return (
     <div className="relative">
-      {/* Grid lines */}
       <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ paddingBottom: mode === 'monthly' ? 0 : 42 }}>
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="border-t border-border/15 w-full" />
@@ -120,48 +112,36 @@ function BarChart({ data, mode, period, onHover, onTouch }: {
               onMouseLeave={() => onHover?.(null)}
               onTouchStart={(e) => { onTouch?.(d, e); onHover?.(d); }}
             >
-              {/* Bar area */}
               <div className="relative w-full flex items-end justify-center"
                 style={{ height: mode === 'monthly' ? '160px' : '120px' }}>
-                {/* Bar wrapper — ensures rounded corners and overflow clip */}
                 <div className="w-full mx-0.5 rounded-t-sm relative overflow-hidden"
                   style={{
                     height: d.revenue > 0 ? `${Math.max(pct, mode === 'monthly' ? 5 : 4)}%` : '6px',
                     transition: 'height 0.4s ease-out',
                   }}
                 >
-                  {/* Bar fill */}
                   <div
                     className={cn(
                       'w-full h-full transition-all duration-200 rounded-t-sm',
                       d.revenue > 0
                         ? 'group-hover:brightness-125 group-hover:shadow-lg group-hover:shadow-orange-500/20'
-                        : 'opacity-10',
+                        : 'opacity-40',
                       d.revenue > 0 ? getBarColor(i, data.length) : 'bg-orange-500'
                     )}
                   />
-                  {/* Shine overlay - only when has revenue */}
                   {d.revenue > 0 && (
                     <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                   )}
                 </div>
               </div>
 
-              {/* Label — two lines for daily views (Hoje + Mês) */}
               {mode === 'daily' ? (
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[11px] font-display font-semibold text-muted-foreground/80 leading-none">
                     {(d.date.split('-')[2] || '').replace(/^0/, '') || d.date}
                   </span>
-                  <span className={cn(
-                    'font-body text-muted-foreground/40 text-center leading-none truncate max-w-full text-[9px]',
-                  )}>
-                    {(() => {
-                      try {
-                        const parsed = new Date(d.date + 'T00:00:00')
-                        return DAY_NAMES_PT[parsed.getDay()]
-                      } catch { return '' }
-                    })()}
+                  <span className="font-body text-muted-foreground/40 text-center leading-none truncate max-w-full text-[9px]">
+                    {(() => { try { const p = new Date(d.date + 'T00:00:00'); return DAY_NAMES_PT[p.getDay()] } catch { return '' } })()}
                   </span>
                 </div>
               ) : mode === 'weekly' ? (
@@ -259,50 +239,65 @@ export function FinancialPage() {
 
   const canNavRight = (() => {
     const today = format(new Date(), 'yyyy-MM-dd')
-    if (period === 'month') {
-      return navDate.substring(0, 7) < today.substring(0, 7)
-    }
-    if (period === 'year') {
-      return navDate.substring(0, 4) < today.substring(0, 4)
-    }
+    if (period === 'month') return navDate.substring(0, 7) < today.substring(0, 7)
+    if (period === 'year') return navDate.substring(0, 4) < today.substring(0, 4)
     return false
   })()
 
   const navigateLeft = () => {
     const d = new Date(navDate + 'T12:00:00')
-    if (period === 'month') {
-      setNavDate(format(subMonths(d, 1), 'yyyy-MM-dd'))
-    } else if (period === 'year') {
-      setNavDate(format(subYears(d, 1), 'yyyy-MM-dd'))
-    }
+    if (period === 'month') setNavDate(format(subDays(d, 30), 'yyyy-MM-dd'))
+    else if (period === 'year') setNavDate(format(subDays(d, 365), 'yyyy-MM-dd'))
   }
 
   const navigateRight = () => {
     const d = new Date(navDate + 'T12:00:00')
-    if (period === 'month') {
-      setNavDate(format(addMonths(d, 1), 'yyyy-MM-dd'))
-    } else if (period === 'year') {
-      setNavDate(format(addYears(d, 1), 'yyyy-MM-dd'))
-    }
+    if (period === 'month') setNavDate(format(subDays(d, -30), 'yyyy-MM-dd'))
+    else if (period === 'year') setNavDate(format(subDays(d, -365), 'yyyy-MM-dd'))
   }
 
   const navLabel = (() => {
     const d = new Date(navDate + 'T12:00:00')
-    if (period === 'month') {
-      return format(d, "MMMM 'de' yyyy", { locale: pt }).replace(/^./, c => c.toUpperCase())
-    }
-    if (period === 'year') {
-      return d.getFullYear().toString()
-    }
+    if (period === 'month') return format(d, "MMMM 'de' yyyy", { locale: pt }).replace(/^./, c => c.toUpperCase())
+    if (period === 'year') return d.getFullYear().toString()
     return ''
   })()
 
   const apiRefDate = (period === 'month' || period === 'year') ? navDate : undefined
 
-  // ── Period-based header label ──────────────────────────────────────────────
+  // ── Period-based date range for filtering appointments ────────────────────
+  const periodRange = useMemo(() => {
+    const now = new Date()
+    const ref = apiRefDate ? new Date(apiRefDate + 'T12:00:00') : now
+    switch (period) {
+      case 'day': {
+        const from = subDays(now, 13)
+        from.setHours(0, 0, 0, 0)
+        const to = new Date(now)
+        to.setHours(23, 59, 59, 999)
+        return { from, to }
+      }
+      case 'week': {
+        const from = subWeeks(now, 13)
+        from.setHours(0, 0, 0, 0)
+        const to = new Date(now)
+        to.setHours(23, 59, 59, 999)
+        return { from, to }
+      }
+      case 'month': {
+        return { from: startOfMonth(ref), to: endOfMonth(ref) }
+      }
+      case 'year': {
+        return { from: startOfYear(ref), to: endOfYear(ref) }
+      }
+      default:
+        return { from: startOfMonth(now), to: endOfMonth(now) }
+    }
+  }, [period, apiRefDate])
+
+  // ── Period-based header label ─────────────────────────────────────────────
   const periodLabel = useMemo(() => {
     const today = new Date()
-    const todayStr = format(today, 'yyyy-MM-dd')
     switch (period) {
       case 'day': {
         const dayName = DAY_NAMES_PT[today.getDay()]
@@ -311,9 +306,9 @@ export function FinancialPage() {
         return `${dayName}, ${dayNum}/${monthNum}`
       }
       case 'week': {
-        const weekStart = startOfWeek(today, { weekStartsOn: 1 })
-        const weekEnd = endOfWeek(today, { weekStartsOn: 1 })
-        return `${format(weekStart, 'd MMM yyyy', { locale: pt })} — ${format(weekEnd, 'd MMM yyyy', { locale: pt })}`
+        const ws = startOfWeek(today, { weekStartsOn: 1 })
+        const we = endOfWeek(today, { weekStartsOn: 1 })
+        return `${format(ws, 'd MMM yyyy', { locale: pt })} — ${format(we, 'd MMM yyyy', { locale: pt })}`
       }
       case 'month':
         return format(today, "MMMM 'de' yyyy", { locale: pt }).replace(/^./, c => c.toUpperCase())
@@ -324,6 +319,7 @@ export function FinancialPage() {
     }
   }, [period])
 
+  // ── Data ───────────────────────────────────────────────────────────────────
   const { isLoading: loadingSummary } = useAnalyticsSummary(effectiveLocationId)
   const trendResponse = useRevenueTrend(effectiveLocationId, period, apiRefDate)
   const trendData = (trendResponse.data as any)?.data ?? []
@@ -332,47 +328,67 @@ export function FinancialPage() {
   const [hoveredData, setHoveredData] = useState<RevenueDataPoint | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
 
-  const { data: apts  = [] } = useAppointments({ locationId: effectiveLocationId, employeeId: myEmpId })
+  const { data: apts = [] } = useAppointments({ locationId: effectiveLocationId, employeeId: myEmpId })
   const applyCommission = (price: number) => isPartner ? price * (commissionPct / 100) : price
 
-  const serviceNameMap   = Object.fromEntries(services.map(s => [s.id, s.name]))
-  const completedApts    = apts.filter(a => a.status === 'completed')
-  const totalRevenue     = completedApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0)
-  const avgTicket        = completedApts.length ? totalRevenue / completedApts.length : 0
-  const cancelledCount   = apts.filter(a => a.status === 'cancelled' || a.status === 'no_show').length
-  const noShowRate       = apts.length ? cancelledCount / apts.length : 0
+  // ── Filter appointments by period ──────────────────────────────────────────
+  const periodApts = useMemo(() => {
+    const { from, to } = periodRange
+    return apts.filter(a => {
+      try {
+        const d = parseISO(a.startsAt)
+        return d >= from && d <= to
+      } catch { return false }
+    })
+  }, [apts, periodRange])
 
-  const statusRevenue = {
-    completed: completedApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
-    pending:   apts.filter(a => a.status === 'pending').reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
-    confirmed: apts.filter(a => a.status === 'confirmed').reduce((s, a) => s + applyCommission(a.price ?? 0), 0),
+  const completedApts = useMemo(() => periodApts.filter(a => a.status === 'completed'), [periodApts])
+  // Use service basePrice as fallback when a.price is undefined
+  const getPrice = (a: typeof periodApts[0]) => {
+    if (a.price != null && a.price > 0) return a.price
+    const svc = services.find(s => s.id === a.serviceId)
+    return svc?.basePrice ?? 0
   }
+  const totalRevenue = useMemo(() => completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0), [completedApts, applyCommission])
+  const avgTicket = useMemo(() => completedApts.length ? totalRevenue / completedApts.length : 0, [completedApts, totalRevenue])
+  const cancelledCount = useMemo(() => periodApts.filter(a => a.status === 'cancelled' || a.status === 'no_show').length, [periodApts])
+  const noShowRate = useMemo(() => periodApts.length ? cancelledCount / periodApts.length : 0, [periodApts, cancelledCount])
+
+  const statusRevenue = useMemo(() => ({
+    completed: completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0),
+    pending: periodApts.filter(a => a.status === 'pending').reduce((s, a) => s + applyCommission(getPrice(a)), 0),
+    confirmed: periodApts.filter(a => a.status === 'confirmed').reduce((s, a) => s + applyCommission(getPrice(a)), 0),
+  }), [periodApts, completedApts, applyCommission])
   const projectedRevenue = statusRevenue.completed + statusRevenue.pending + statusRevenue.confirmed
 
-  const serviceRevMap = completedApts.reduce((acc, a) => {
-    const name = serviceNameMap[a.serviceId] ?? a.serviceId
-    acc[name] = (acc[name] ?? 0) + applyCommission(a.price ?? 0)
-    return acc
-  }, {} as Record<string, number>)
-  const topServices = Object.entries(serviceRevMap).sort(([, a], [, b]) => b - a).slice(0, 5)
+  const serviceNameMap = useMemo(() => Object.fromEntries(services.map(s => [s.id, s.name])), [services])
+  const topServices = useMemo(() => {
+    const map = completedApts.reduce((acc, a) => {
+      const name = serviceNameMap[a.serviceId] ?? a.serviceId
+      acc[name] = (acc[name] ?? 0) + applyCommission(getPrice(a))
+      return acc
+    }, {} as Record<string, number>)
+    return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 5)
+  }, [completedApts, serviceNameMap, applyCommission])
 
-  const locationRevMap = completedApts.reduce((acc, a) => {
-    acc[a.locationId] = (acc[a.locationId] ?? 0) + (a.price ?? 0)
-    return acc
-  }, {} as Record<string, number>)
+  const locationRevMap = useMemo(() =>
+    completedApts.reduce((acc, a) => {
+      acc[a.locationId] = (acc[a.locationId] ?? 0) + getPrice(a)
+      return acc
+    }, {} as Record<string, number>),
+  [completedApts])
 
   const PERIODS = [
-    { key: 'day'   as const, label: 'Hoje'     },
-    { key: 'week'  as const, label: 'Semana'    },
-    { key: 'month' as const, label: 'Mês'       },
-    { key: 'year'  as const, label: 'Ano'       },
+    { key: 'day' as const, label: 'Hoje' },
+    { key: 'week' as const, label: 'Semana' },
+    { key: 'month' as const, label: 'Mês' },
+    { key: 'year' as const, label: 'Ano' },
   ]
 
   return (
     <div>
       <PageHeader title={t('nav.financial')} />
 
-      {/* ── Location filter for super_admin ──────────────────────────────────── */}
       {isSuperAdmin && locations.length > 1 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
@@ -394,63 +410,42 @@ export function FinancialPage() {
         </div>
       )}
 
-      {/* Period selector + navigation */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           {PERIODS.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)}
               className={cn('h-7 px-4 rounded-md text-xs font-body font-medium transition-all',
-                period === p.key
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                period === p.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
-            >
-              {p.label}
-            </button>
+            >{p.label}</button>
           ))}
         </div>
 
-        {/* Navigation (month/year) */}
         {(period === 'month' || period === 'year') && (
           <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1">
             <button onClick={navigateLeft}
               className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <span className="text-xs font-display font-semibold text-foreground min-w-[100px] text-center select-none">
-              {navLabel}
-            </span>
-
-            <button onClick={navigateRight}
-              disabled={!canNavRight}
-              className={cn(
-                'w-6 h-6 rounded-md flex items-center justify-center transition-all',
-                canNavRight
-                  ? 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  : 'text-muted-foreground/20 cursor-not-allowed'
+            ><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-xs font-display font-semibold text-foreground min-w-[100px] text-center select-none">{navLabel}</span>
+            <button onClick={navigateRight} disabled={!canNavRight}
+              className={cn('w-6 h-6 rounded-md flex items-center justify-center transition-all',
+                canNavRight ? 'text-muted-foreground hover:text-foreground hover:bg-background' : 'text-muted-foreground/20 cursor-not-allowed'
               )}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            ><ChevronRight className="w-4 h-4" /></button>
           </div>
         )}
 
-        {/* Period label showing date/range */}
-        <span className="text-xs font-body text-muted-foreground">
-          {periodLabel}
-        </span>
+        <span className="text-xs font-body text-muted-foreground">{periodLabel}</span>
       </div>
 
       {loadingSummary ? <Spinner /> : (
         <>
-          {/* KPIs */}
+          {/* KPIs — now scoped to selected period */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-            <Metric label={t('financial.totalRevenue')}  value={formatCurrency(totalRevenue)}  icon={Euro}         trend={12} color="text-green-400" />
-            <Metric label={t('financial.avgTicket')}     value={formatCurrency(avgTicket)}     icon={ArrowUpRight} trend={5}  color="text-blue-400"  />
-            <Metric label={t('financial.completedApts')} value={String(completedApts.length)}  icon={CalendarDays} sub={t('financial.ofTotal', { n: apts.length })} />
-            <Metric label={t('financial.noShowRate')}    value={formatPercent(noShowRate)}     icon={Users}        trend={noShowRate > 0.1 ? -5 : 3} color="text-amber-400" />
+            <Metric label={t('financial.totalRevenue')} value={formatCurrency(totalRevenue)} icon={Euro} trend={12} color="text-green-400" />
+            <Metric label={t('financial.avgTicket')} value={formatCurrency(avgTicket)} icon={ArrowUpRight} trend={5} color="text-blue-400" />
+            <Metric label={t('financial.completedApts')} value={String(completedApts.length)} icon={CalendarDays} sub={t('financial.ofTotal', { n: periodApts.length })} />
+            <Metric label={t('financial.noShowRate')} value={formatPercent(noShowRate)} icon={Users} trend={noShowRate > 0.1 ? -5 : 3} color="text-amber-400" />
           </div>
 
           {/* Chart + projection */}
@@ -471,22 +466,14 @@ export function FinancialPage() {
                   <div
                     onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => { setTooltipPos(null); setHoveredData(null) }}
-                    onTouchMove={(e) => {
-                      const touch = e.touches[0]
-                      if (touch) setTooltipPos({ x: touch.clientX, y: touch.clientY })
-                    }}
-                    onTouchEnd={() => {
-                      // Dismiss on touchend with delay so user can see the value
-                      setTimeout(() => { setTooltipPos(null); setHoveredData(null) }, 2000)
-                    }}
+                    onTouchMove={(e) => { const t = e.touches[0]; if (t) setTooltipPos({ x: t.clientX, y: t.clientY }) }}
+                    onTouchEnd={() => setTimeout(() => { setTooltipPos(null); setHoveredData(null) }, 2000)}
                   >
                     <BarChart data={trendData} mode={trendMode} period={period} onHover={setHoveredData} />
                   </div>
                 )}
-                {/* Floating tooltip — position:fixed so NEVER clipped by any overflow */}
                 {hoveredData && tooltipPos && (
-                  <div
-                    className="fixed pointer-events-none z-[9999]"
+                  <div className="fixed pointer-events-none z-[9999]"
                     style={{
                       left: Math.min(tooltipPos.x + 12, window.innerWidth - 200),
                       top: Math.max(tooltipPos.y - 10, 20),
@@ -511,8 +498,8 @@ export function FinancialPage() {
               <CardContent className="space-y-3">
                 {[
                   { label: t('financial.completed'), value: statusRevenue.completed, color: 'bg-green-500' },
-                  { label: t('financial.confirmed'), value: statusRevenue.confirmed, color: 'bg-blue-500'  },
-                  { label: t('financial.pending'),   value: statusRevenue.pending,   color: 'bg-amber-500' },
+                  { label: t('financial.confirmed'), value: statusRevenue.confirmed, color: 'bg-blue-500' },
+                  { label: t('financial.pending'), value: statusRevenue.pending, color: 'bg-amber-500' },
                 ].map(row => (
                   <div key={row.label}>
                     <div className="flex items-center justify-between mb-1">
@@ -535,7 +522,6 @@ export function FinancialPage() {
 
           {/* Bottom row */}
           <div className={cn('grid gap-4', showLocationChart ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-lg')}>
-            {/* Top services */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -566,7 +552,6 @@ export function FinancialPage() {
               </CardContent>
             </Card>
 
-            {/* Revenue by location — super_admin with 2+ locations only */}
             {showLocationChart && (
               <Card>
                 <CardHeader className="pb-2">
@@ -578,27 +563,24 @@ export function FinancialPage() {
                 <CardContent className="space-y-2.5">
                   {Object.entries(locationRevMap).length === 0 ? (
                     <p className="text-sm text-muted-foreground font-body text-center py-4">{t('common.noResults')}</p>
-                  ) : Object.entries(locationRevMap)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([locId, rev]) => {
-                      const loc = locations.find(l => l.id === locId)
-                      const pct = (rev / totalRevenue) * 100
-                      return (
-                        <div key={locId}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-body text-foreground">{loc?.name ?? locId}</span>
-                            <div className="flex items-center gap-2">
-                              <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(pct / 100)}</Badge>
-                              <span className="text-xs font-display font-semibold text-foreground">{formatCurrency(rev)}</span>
-                            </div>
-                          </div>
-                          <div className="h-1 rounded-full bg-muted">
-                            <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
+                  ) : Object.entries(locationRevMap).sort(([, a], [, b]) => b - a).map(([locId, rev]) => {
+                    const loc = locations.find(l => l.id === locId)
+                    const pct = (rev / totalRevenue) * 100
+                    return (
+                      <div key={locId}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-body text-foreground">{loc?.name ?? locId}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(pct / 100)}</Badge>
+                            <span className="text-xs font-display font-semibold text-foreground">{formatCurrency(rev)}</span>
                           </div>
                         </div>
-                      )
-                    })
-                  }
+                        <div className="h-1 rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </CardContent>
               </Card>
             )}

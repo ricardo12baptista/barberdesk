@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from 'date-fns'
 import { pt as ptLocale, enUS } from 'date-fns/locale'
-import { Search, Filter, CalendarDays, Clock, User, Scissors, CheckCircle2, Ban, XCircle, Phone, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useAppointments, useEmployees, useClientsFlat, useAllClients, useServices, useUpdateAppointment } from '@/hooks'
+import { Search, Filter, CalendarDays, Clock, User, Scissors, CheckCircle2, Ban, XCircle, Phone, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { useAppointments, useEmployees, useClientsFlat, useAllClients, useServices, useUpdateAppointmentStatus } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, Badge, Avatar, Button, Spinner, EmptyState } from '@/components/ui'
@@ -14,8 +14,9 @@ const VISIBLE_STATUSES = ['confirmed', 'completed', 'no_show'] as const
 type VisibleStatus = typeof VISIBLE_STATUSES[number]
 
 function toVisibleStatus(status: AppointmentStatus): VisibleStatus {
-  if (status === 'completed')                       return 'completed'
-  if (status === 'no_show' || status === 'cancelled') return 'no_show'
+  const s = status?.toLowerCase?.() ?? ''
+  if (s === 'completed')                       return 'completed'
+  if (s === 'no_show' || s === 'cancelled') return 'no_show'
   return 'confirmed'
 }
 
@@ -26,53 +27,44 @@ export function AppointmentsPage() {
   const isSuperAdmin = user?.role === 'super_admin'
   const isPartner    = user?.role === 'partner'
   const isEmployee   = user?.role === 'employee'
-  const isOwnOnly    = isPartner || isEmployee   // partner + employee see own data only
+  const isOwnOnly    = isPartner || isEmployee
   const locationId   = activeLocation?.id ?? user?.locationId ?? undefined
   const dateLocale   = i18n.language === 'pt' ? ptLocale : enUS
 
-  // ── Selected date (default: today) ────────────────────────────────────────
+  // ── Date ──────────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const d = new Date(); d.setHours(0, 0, 0, 0); return d
   })
   const dateKey = format(selectedDate, 'yyyy-MM-dd')
 
-  // Resolve employee record first so we can pass it to useAppointments
+  // ── Confirm prompt ────────────────────────────────────
+  const [confirmAction, setConfirmAction] = useState<{
+    aptId: string; status: AppointmentStatus; label: string
+  } | null>(null)
+
+  // ── Data ──────────────────────────────────────────────
   const { data: employees  = [] } = useEmployees(locationId)
   const myEmployeeId = isOwnOnly
     ? employees.find(e => e.userId === user?.id)?.id
     : undefined
 
- // const { data: appointments = [], isLoading } = useAppointments({ locationId, date: dateKey, employeeId: myEmployeeId })
   const { data: appointments = [], isLoading } = useAppointments({ locationId, startsAt: dateKey, endsAt: dateKey, employeeId: myEmployeeId })
   const { data: ownClients   = [] } = useClientsFlat()
   const { data: allClients   = [] } = useAllClients()
   const clients = isSuperAdmin ? allClients : ownClients
   const { data: services     = [] } = useServices()
-  const updateApt = useUpdateAppointment()
+  const updateApt = useUpdateAppointmentStatus()
 
+  // ── Action buttons config ─────────────────────────────
   const STATUS_CONFIG: Record<VisibleStatus, { label: string; icon: React.ElementType; style: string }> = {
     confirmed: { label: t('appointments.status.confirmed'), icon: CheckCircle2, style: 'bg-blue-500/15  text-blue-400  border-blue-500/30'  },
     completed: { label: t('appointments.status.completed'), icon: CheckCircle2, style: 'bg-green-500/15 text-green-500 border-green-500/30' },
     no_show:   { label: t('appointments.status.no_show'),   icon: Ban,          style: 'bg-slate-500/15 text-slate-400 border-slate-500/30' },
   }
-  const ACTIONS: Partial<Record<AppointmentStatus, { label: string; status: AppointmentStatus; icon: React.ElementType; style: string }[]>> = {
-    confirmed:   [
-      { label: t('appointments.markDone'),     status: 'completed', icon: CheckCircle2, style: 'hover:text-green-400 hover:bg-green-500/10' },
-      { label: t('appointments.markNoShow'),   status: 'no_show',   icon: Ban,          style: 'hover:text-slate-400 hover:bg-slate-500/10' },
-      { label: t('appointments.markCancelled'),status: 'cancelled', icon: XCircle,      style: 'hover:text-red-400   hover:bg-red-500/10'   },
-    ],
-    in_progress: [
-      { label: t('appointments.markDone'),     status: 'completed', icon: CheckCircle2, style: 'hover:text-green-400 hover:bg-green-500/10' },
-      { label: t('appointments.markNoShow'),   status: 'no_show',   icon: Ban,          style: 'hover:text-slate-400 hover:bg-slate-500/10' },
-      { label: t('appointments.markCancelled'),status: 'cancelled', icon: XCircle,      style: 'hover:text-red-400   hover:bg-red-500/10'   },
-    ],
-    pending: [
-      { label: t('appointments.markDone'),     status: 'completed', icon: CheckCircle2, style: 'hover:text-green-400 hover:bg-green-500/10' },
-      { label: t('appointments.markNoShow'),   status: 'no_show',   icon: Ban,          style: 'hover:text-slate-400 hover:bg-slate-500/10' },
-      { label: t('appointments.markCancelled'),status: 'cancelled', icon: XCircle,      style: 'hover:text-red-400   hover:bg-red-500/10'   },
-    ],
-  }
 
+  const ACTIONABLE_STATUSES: AppointmentStatus[] = ['pending', 'confirmed', 'in_progress']
+
+  // ── Filters ───────────────────────────────────────────
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState<VisibleStatus | 'all'>('all')
   const [empFilter,    setEmpFilter]    = useState('all')
@@ -86,7 +78,6 @@ export function AppointmentsPage() {
     let list = [...appointments].sort((a, b) =>
       new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()
     )
-    // Own-only roles: always restrict to their own employee record
     if (isOwnOnly && myEmployeeId) list = list.filter(a => a.employeeId === myEmployeeId)
     if (statusFilter !== 'all') list = list.filter(a => toVisibleStatus(a.status) === statusFilter)
     if (empFilter    !== 'all') list = list.filter(a => a.employeeId === empFilter)
@@ -100,7 +91,7 @@ export function AppointmentsPage() {
       )
     }
     return list
-  }, [appointments, statusFilter, empFilter, search, clientMap, serviceMap, empMap])
+  }, [appointments, statusFilter, empFilter, search, clientMap, serviceMap, empMap, isOwnOnly, myEmployeeId])
 
   const grouped = useMemo(() => {
     const map = new Map<string, Appointment[]>()
@@ -112,8 +103,6 @@ export function AppointmentsPage() {
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a))
   }, [filtered])
 
-  // Since all appointments are already filtered by date from the API,
-  // use the full list for stats
   const confirmedCount = appointments.filter(a => toVisibleStatus(a.status) === 'confirmed').length
   const dayRevenue     = appointments.filter(a => a.status === 'completed').reduce((s, a) => s + (a.price ?? 0), 0)
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (empFilter !== 'all' ? 1 : 0)
@@ -127,15 +116,17 @@ export function AppointmentsPage() {
         ? (i18n.language === 'pt' ? 'Ontem' : 'Yesterday')
         : format(selectedDate, "EEE, d MMM", { locale: dateLocale })
 
-  const handleAction = async (aptId: string, status: AppointmentStatus) => {
-    await updateApt.mutateAsync({ id: aptId, data: { status } })
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return
+    await updateApt.mutateAsync({ id: confirmAction.aptId, status: confirmAction.status.toUpperCase() as AppointmentStatus })
+    setConfirmAction(null)
   }
 
   return (
     <div>
       <PageHeader title={t('nav.appointments')} subtitle={`${appointments.length} ${i18n.language === 'pt' ? 'marcações' : 'appointments'}`} />
 
-      {/* ── Date navigator ───────────────────────────────────────────────── */}
+      {/* ── Date navigator ─────────────────────────────── */}
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={() => setSelectedDate(d => subDays(d, 1))}
@@ -145,7 +136,6 @@ export function AppointmentsPage() {
         </button>
 
         <div className="flex items-center gap-2 flex-1">
-          {/* Quick day pills */}
           {[-1, 0, 1].map(offset => {
             const d = offset === 0 ? new Date() : offset === -1 ? subDays(new Date(), 1) : addDays(new Date(), 1)
             d.setHours(0, 0, 0, 0)
@@ -169,7 +159,6 @@ export function AppointmentsPage() {
             )
           })}
 
-          {/* Date display / custom picker */}
           <div className="flex items-center gap-2 ml-auto">
             <span className={cn('text-sm font-display font-semibold capitalize',
               isSelectedToday ? 'text-primary' : 'text-foreground'
@@ -197,7 +186,7 @@ export function AppointmentsPage() {
         </button>
       </div>
 
-      {/* ── Summary strip ────────────────────────────────────────────────── */}
+      {/* ── Summary strip ──────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
           { label: i18n.language === 'pt' ? 'Marcações' : 'Appointments', value: String(appointments.length), sub: dateLabel,                        color: 'text-foreground'  },
@@ -212,7 +201,7 @@ export function AppointmentsPage() {
         ))}
       </div>
 
-      {/* Search + filter toggle */}
+      {/* ── Search + Filter toggle ─────────────────────── */}
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -266,6 +255,7 @@ export function AppointmentsPage() {
         </div>
       )}
 
+      {/* ── List ────────────────────────────────────────── */}
       {isLoading ? <Spinner /> : filtered.length === 0 ? (
         <Card><CardContent className="py-10">
           <EmptyState icon={CalendarDays} title={t('appointments.noResults')}
@@ -284,7 +274,7 @@ export function AppointmentsPage() {
                     const vstatus = toVisibleStatus(apt.status)
                     const cfg     = STATUS_CONFIG[vstatus]
                     const SIcon   = cfg.icon
-                    const actions = ACTIONS[apt.status] ?? []
+                    const isActionable = ACTIONABLE_STATUSES.includes(apt.status.toLowerCase() as AppointmentStatus)
 
                     return (
                       <div key={apt.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
@@ -326,19 +316,24 @@ export function AppointmentsPage() {
                             </p>
                           )}
                         </div>
-                        {actions.length > 0 && (
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {actions.map(action => {
-                              const AI = action.icon
-                              return (
-                                <button key={action.status} onClick={() => handleAction(apt.id, action.status)}
-                                  title={action.label}
-                                  className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground transition-colors', action.style)}
-                                >
-                                  <AI className="w-3.5 h-3.5" />
-                                </button>
-                              )
-                            })}
+
+                        {/* ── Action buttons ────────────────── */}
+                        {isActionable && (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => setConfirmAction({ aptId: apt.id, status: 'completed', label: t('appointments.markDone') })}
+                              className="h-7 px-2 rounded-lg text-[11px] font-body font-medium flex items-center gap-1 transition-colors text-green-400 bg-green-500/15 hover:bg-green-500/25"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>{t('appointments.markDone')}</span>
+                            </button>
+                            <button
+                              onClick={() => setConfirmAction({ aptId: apt.id, status: 'no_show', label: t('appointments.markNoShow') })}
+                              className="h-7 px-2 rounded-lg text-[11px] font-body font-medium flex items-center gap-1 transition-colors text-slate-400 bg-slate-500/15 hover:bg-slate-500/25"
+                            >
+                              <Ban className="w-3 h-3" />
+                              <span>{t('appointments.markNoShow')}</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -348,6 +343,54 @@ export function AppointmentsPage() {
               </Card>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Confirm modal ──────────────────────────────── */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmAction(null)} />
+          <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-foreground">
+                  {confirmAction.status === 'completed'
+                    ? (i18n.language === 'pt' ? 'Concluir marcação?' : 'Complete appointment?')
+                    : (i18n.language === 'pt' ? 'Marcar como falta?' : 'Mark as no-show?')
+                  }
+                </h3>
+                <p className="text-sm font-body text-muted-foreground">
+                  {confirmAction.status === 'completed'
+                    ? (i18n.language === 'pt' ? 'O cliente apareceu e pagou?' : 'Did the client show up and pay?')
+                    : (i18n.language === 'pt' ? 'O cliente não apareceu?' : "Didn't the client show up?")
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-5">
+              <Button variant="outline" size="sm" onClick={() => setConfirmAction(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmAction}
+                disabled={updateApt.isPending}
+                className={
+                  confirmAction.status === 'completed'
+                    ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'
+                    : 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30 border-slate-500/30'
+                }
+              >
+                {updateApt.isPending
+                  ? (i18n.language === 'pt' ? 'A guardar...' : 'Saving...')
+                  : confirmAction.label
+                }
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
