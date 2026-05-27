@@ -114,9 +114,22 @@ export interface AppointmentFilters {
   status?:      AppointmentStatus
 }
 
+export interface DailySummary {
+  date: string
+  locationId: string
+  total: number
+  completed: number
+  confirmed: number
+  noShow: number
+  cancelled: number
+  revenue: number
+}
+
 export const appointmentsApi = {
   getAll:       (filters?: AppointmentFilters) =>
     apiClient.get<Appointment[]>('/appointments', { params: filters }),
+  getDailySummary: (date: string, locationId?: string) =>
+    apiClient.get<DailySummary>('/appointments/daily-summary', { params: { date, locationId } }),
   getAvailableSlots: (employeeId: string, date: string, slotDurationMinutes?: number) =>
     apiClient.get(`/appointments/available-slots`, { params: { employeeId, date, slotDurationMinutes } }),
   create:       (data: Partial<Appointment>) => apiClient.post<Appointment>('/appointments', data),
@@ -128,11 +141,34 @@ export const appointmentsApi = {
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
+export interface FinancialSummary {
+  period: string
+  total: number
+  completedCount: number
+  confirmedCount: number
+  pendingCount: number
+  cancelledCount: number
+  noShowCount: number
+  totalRevenue: number
+  avgTicket: number
+  noShowRate: number
+  revenueByStatus: {
+    completed: number
+    confirmed: number
+    pending: number
+  }
+  projectedRevenue: number
+  topServices: Array<{ name: string; revenue: number }>
+  locationRevenue: Record<string, number>
+}
+
 export const analyticsApi = {
   getSummary:      (locationId?: string) =>
     apiClient.get('/analytics/summary', { params: { locationId } }),
   getRevenueTrend: (locationId?: string, period?: string, refDate?: string) =>
     apiClient.get('/analytics/revenue-trend', { params: { locationId, period, refDate } }),
+  getFinancialSummary: (locationId?: string, period?: string, refDate?: string) =>
+    apiClient.get<FinancialSummary>('/analytics/financial-summary', { params: { locationId, period, refDate } }),
 }
 
 // ─── Commission ────────────────────────────────────────────────────────────────

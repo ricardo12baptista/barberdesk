@@ -338,6 +338,14 @@ function makeApt(hour: number, minute: number): string {
   return dt.toISOString()
 }
 
+// Cria uma data ISO para ONTEM a uma hora específica
+function makeAptYesterday(hour: number, minute: number): string {
+  const dt = new Date(today)
+  dt.setDate(dt.getDate() - 1)
+  dt.setHours(hour, minute, 0, 0)
+  return dt.toISOString()
+}
+
 function isPast(hour: number, minute = 0): boolean {
   return hour < currentHour || (hour === currentHour && minute <= now.getMinutes())
 }
@@ -432,6 +440,27 @@ export const mockAppointments: Appointment[] = [
   // ── Late appointments (always future-friendly for testing) ──
   { id: 'apt-5-12',locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-2', serviceId: 'svc-5-1', status: futureStatus(), startsAt: makeApt(currentHour + 1, 0),  endsAt: makeApt(currentHour + 1, 30), price: 15 },
   { id: 'apt-5-13',locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-3', serviceId: 'svc-5-2', status: futureStatus(), startsAt: makeApt(currentHour + 1, 30), endsAt: makeApt(currentHour + 2, 0), price: 12 },
+
+  // ── Yesterday appointments (for testing past day navigation) ──
+  // Org5 - loc5a - João Silva (e5-1) - 1 completed Corte Clássico (15€)
+  { id: 'apt-5-yest-1', locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-1', serviceId: 'svc-5-1', status: 'completed', startsAt: makeAptYesterday(10, 0), endsAt: makeAptYesterday(10, 30), price: 15 },
+  // Org5 - loc5a - Maria Santos (e5-2) - 1 confirmed (to-do, not counted for revenue)
+  { id: 'apt-5-yest-2', locationId: 'loc-5a', employeeId: 'e5-2', clientId: 'cli-5-2', serviceId: 'svc-5-2', status: 'confirmed', startsAt: makeAptYesterday(11, 0), endsAt: makeAptYesterday(11, 30), price: 12 },
+  // Org5 - loc5a - João Silva (e5-1) - 1 more confirmed (to-do)
+  { id: 'apt-5-yest-3', locationId: 'loc-5a', employeeId: 'e5-1', clientId: 'cli-5-3', serviceId: 'svc-5-3', status: 'confirmed', startsAt: makeAptYesterday(14, 0), endsAt: makeAptYesterday(15, 0), price: 25 },
+  // Org5 - loc5b - Tiago Almeida (e5-3) - 1 completed on yesterday in Belém
+  { id: 'apt-5-yest-4', locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-4', serviceId: 'svc-5-1', status: 'completed', startsAt: makeAptYesterday(9, 0), endsAt: makeAptYesterday(9, 30), price: 15 },
+  // Org5 - loc5b - Tiago Almeida (e5-3) - 1 no_show yesterday
+  { id: 'apt-5-yest-5', locationId: 'loc-5b', employeeId: 'e5-3', clientId: 'cli-5-5', serviceId: 'svc-5-2', status: 'no_show', startsAt: makeAptYesterday(15, 0), endsAt: makeAptYesterday(15, 30), price: 12 },
+  //
+  // Cenário esperado: na loc-5a (Lisboa Centro) ontem →
+  //   • 3 marcações totais
+  //   • 2 confirmadas/pendentes (por fazer)
+  //   • 1 concluída de 15€ → receita = 15€ ✅
+  // Na loc-5b (Belém) ontem →
+  //   • 2 marcações totais
+  //   • 1 concluída de 15€ + 1 no_show → receita = 15€
+  // Super admin "Todas as Lojas" → receita ontem = 15€ + 15€ = 30€
 ]
 
 

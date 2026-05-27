@@ -9,6 +9,8 @@ import {
   commissionApi,
   AppointmentFilters,
   CreateEmployeeData,
+  DailySummary,
+  FinancialSummary,
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
 import type { Appointment, AppointmentStatus, Client, Location, Service } from '@/models'
@@ -24,6 +26,7 @@ export const qk = {
   appointments: (filters?: AppointmentFilters) => ['appointments', filters] as const,
   availableSlots: (employeeId?: string, date?: string, slotDuration?: number) => 
     ['appointments', 'available-slots', employeeId, date, slotDuration] as const,
+  dailySummary: (date?: string, locationId?: string) => ['appointments', 'daily-summary', date, locationId] as const,
   summary:      (locationId?: string) => ['analytics', 'summary', locationId] as const,
   revenueTrend: (locationId?: string, period?: string, refDate?: string) => ['analytics', 'revenue-trend', locationId, period, refDate] as const,
 }
@@ -165,6 +168,16 @@ export const useAvailableSlots = (employeeId?: string, date?: string, slotDurati
   })
 }
 
+// ─── Daily Summary ────────────────────────────────────────────────────────────
+// Busca sumário diário para os cartões de marcação (total, confirmed, revenue)
+export const useDailySummary = (date: string, locationId?: string) =>
+  useQuery<DailySummary>({
+    queryKey: qk.dailySummary(date, locationId),
+    queryFn:  () => appointmentsApi.getDailySummary(date, locationId).then(r => r.data),
+    staleTime: 1000 * 60 * 2,
+    enabled:  !!date,
+  })
+
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const useAnalyticsSummary = (locationId?: string) =>
   useQuery({
@@ -177,6 +190,14 @@ export const useRevenueTrend = (locationId?: string, period?: string, refDate?: 
   useQuery({
     queryKey: qk.revenueTrend(locationId, period, refDate),
     queryFn:  () => analyticsApi.getRevenueTrend(locationId, period, refDate).then(r => r.data),
+  })
+
+// ✅ Dedicated endpoint for financial KPIs (handles backend status casing correctly)
+export const useFinancialSummary = (locationId?: string, period?: string, refDate?: string) =>
+  useQuery<FinancialSummary>({
+    queryKey: ['analytics', 'financial-summary', locationId, period, refDate],
+    queryFn:  () => analyticsApi.getFinancialSummary(locationId, period, refDate).then(r => r.data),
+    staleTime: 1000 * 60 * 2,
   })
 
 // ─── Location / Employee mutations ────────────────────────────────────────────

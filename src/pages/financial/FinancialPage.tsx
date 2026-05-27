@@ -6,19 +6,17 @@ import {
   ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import {
-  useAnalyticsSummary, useRevenueTrend, useLocations, useAllLocations,
-  useAppointments, useServices, useAllServices, useEmployees,
+  useFinancialSummary, useRevenueTrend, useLocations, useAllLocations,
 } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Badge, Spinner } from '@/components/ui'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 import {
-  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, parseISO,
+  format, startOfWeek, endOfWeek, subDays,
 } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import type { RevenueDataPoint } from '@/models'
-
 const DAY_NAMES_PT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 function getDayLabel(dateStr: string): string {
@@ -32,7 +30,7 @@ function getDayLabel(dateStr: string): string {
   }
 }
 
-function getBarColor(dayIndex: number, total: number) {
+function getBarColor(dayIndex: number, _total: number) {
   const colors = [
     'bg-orange-500', 'bg-orange-500', 'bg-orange-500',
     'bg-orange-500/90', 'bg-orange-500/85', 'bg-orange-500/80',
@@ -208,7 +206,6 @@ export function FinancialPage() {
   const { activeLocation } = useUIStore()
 
   const isSuperAdmin = user?.role === 'super_admin'
-  const isPartner    = user?.role === 'partner'
 
   const [finLocationId, setFinLocationId] = useState<string | undefined>(undefined)
   const effectiveLocationId = finLocationId ?? activeLocation?.id ?? user?.locationId ?? undefined
@@ -216,15 +213,6 @@ export function FinancialPage() {
   const { data: ownLocations = [] } = useLocations()
   const { data: allLocations = [] } = useAllLocations()
   const locations = isSuperAdmin ? allLocations : ownLocations
-
-  const { data: ownServices = [] } = useServices()
-  const { data: allServices = [] } = useAllServices()
-  const services = isSuperAdmin ? allServices : ownServices
-
-  const { data: employees = [] } = useEmployees(effectiveLocationId)
-  const myEmployee   = isPartner ? employees.find(e => e.userId === user?.id) : undefined
-  const myEmpId      = myEmployee?.id
-  const commissionPct = myEmployee?.commissionPercent ?? 100
 
   const showLocationChart = isSuperAdmin && locations.length > 1
 
@@ -265,36 +253,6 @@ export function FinancialPage() {
 
   const apiRefDate = (period === 'month' || period === 'year') ? navDate : undefined
 
-  // ── Period-based date range for filtering appointments ────────────────────
-  const periodRange = useMemo(() => {
-    const now = new Date()
-    const ref = apiRefDate ? new Date(apiRefDate + 'T12:00:00') : now
-    switch (period) {
-      case 'day': {
-        const from = subDays(now, 13)
-        from.setHours(0, 0, 0, 0)
-        const to = new Date(now)
-        to.setHours(23, 59, 59, 999)
-        return { from, to }
-      }
-      case 'week': {
-        const from = subWeeks(now, 13)
-        from.setHours(0, 0, 0, 0)
-        const to = new Date(now)
-        to.setHours(23, 59, 59, 999)
-        return { from, to }
-      }
-      case 'month': {
-        return { from: startOfMonth(ref), to: endOfMonth(ref) }
-      }
-      case 'year': {
-        return { from: startOfYear(ref), to: endOfYear(ref) }
-      }
-      default:
-        return { from: startOfMonth(now), to: endOfMonth(now) }
-    }
-  }, [period, apiRefDate])
-
   // ── Period-based header label ─────────────────────────────────────────────
   const periodLabel = useMemo(() => {
     const today = new Date()
@@ -319,64 +277,26 @@ export function FinancialPage() {
     }
   }, [period])
 
-  // ── Data ───────────────────────────────────────────────────────────────────
-  const { isLoading: loadingSummary } = useAnalyticsSummary(effectiveLocationId)
+  // ── Data: ✅ Dedicated financial summary endpoint ────────────────────────────
+  const { data: finSummary, isLoading: loadingSummary } = useFinancialSummary(effectiveLocationId, period, apiRefDate)
+
+  // ✅ Use financial summary from dedicated endpoint
+  const totalRevenue   = finSummary?.totalRevenue ?? 0
+  const avgTicket      = finSummary?.avgTicket ?? 0
+  const completedCount = finSummary?.completedCount ?? 0
+  const totalApts      = finSummary?.total ?? 0
+  const noShowRate     = finSummary?.noShowRate ?? 0
+  const statusRevenue  = finSummary?.revenueByStatus ?? { completed: 0, confirmed: 0, pending: 0 }
+  const projectedRevenue = finSummary?.projectedRevenue ?? 0
+  const topServices    = finSummary?.topServices ?? []
+  const locationRevMap = finSummary?.locationRevenue ?? {}
+
   const trendResponse = useRevenueTrend(effectiveLocationId, period, apiRefDate)
   const trendData = (trendResponse.data as any)?.data ?? []
   const trendMode = (trendResponse.data as any)?.mode ?? 'daily'
   const { isLoading: loadingTrend } = trendResponse
   const [hoveredData, setHoveredData] = useState<RevenueDataPoint | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
-
-  const { data: apts = [] } = useAppointments({ locationId: effectiveLocationId, employeeId: myEmpId })
-  const applyCommission = (price: number) => isPartner ? price * (commissionPct / 100) : price
-
-  // ── Filter appointments by period ──────────────────────────────────────────
-  const periodApts = useMemo(() => {
-    const { from, to } = periodRange
-    return apts.filter(a => {
-      try {
-        const d = parseISO(a.startsAt)
-        return d >= from && d <= to
-      } catch { return false }
-    })
-  }, [apts, periodRange])
-
-  const completedApts = useMemo(() => periodApts.filter(a => a.status === 'completed'), [periodApts])
-  // Use service basePrice as fallback when a.price is undefined
-  const getPrice = (a: typeof periodApts[0]) => {
-    if (a.price != null && a.price > 0) return a.price
-    const svc = services.find(s => s.id === a.serviceId)
-    return svc?.basePrice ?? 0
-  }
-  const totalRevenue = useMemo(() => completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0), [completedApts, applyCommission])
-  const avgTicket = useMemo(() => completedApts.length ? totalRevenue / completedApts.length : 0, [completedApts, totalRevenue])
-  const cancelledCount = useMemo(() => periodApts.filter(a => a.status === 'cancelled' || a.status === 'no_show').length, [periodApts])
-  const noShowRate = useMemo(() => periodApts.length ? cancelledCount / periodApts.length : 0, [periodApts, cancelledCount])
-
-  const statusRevenue = useMemo(() => ({
-    completed: completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0),
-    pending: periodApts.filter(a => a.status === 'pending').reduce((s, a) => s + applyCommission(getPrice(a)), 0),
-    confirmed: periodApts.filter(a => a.status === 'confirmed').reduce((s, a) => s + applyCommission(getPrice(a)), 0),
-  }), [periodApts, completedApts, applyCommission])
-  const projectedRevenue = statusRevenue.completed + statusRevenue.pending + statusRevenue.confirmed
-
-  const serviceNameMap = useMemo(() => Object.fromEntries(services.map(s => [s.id, s.name])), [services])
-  const topServices = useMemo(() => {
-    const map = completedApts.reduce((acc, a) => {
-      const name = serviceNameMap[a.serviceId] ?? a.serviceId
-      acc[name] = (acc[name] ?? 0) + applyCommission(getPrice(a))
-      return acc
-    }, {} as Record<string, number>)
-    return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 5)
-  }, [completedApts, serviceNameMap, applyCommission])
-
-  const locationRevMap = useMemo(() =>
-    completedApts.reduce((acc, a) => {
-      acc[a.locationId] = (acc[a.locationId] ?? 0) + getPrice(a)
-      return acc
-    }, {} as Record<string, number>),
-  [completedApts])
 
   const PERIODS = [
     { key: 'day' as const, label: 'Hoje' },
@@ -394,7 +314,7 @@ export function FinancialPage() {
           <div className="relative">
             <select
               value={finLocationId ?? 'all'}
-              onChange={e => { setFinLocationId(e.target.value === 'all' ? undefined : e.target.value); setPeriod('month') }}
+              onChange={e => { setFinLocationId(e.target.value === 'all' ? undefined : e.target.value) }}
               className={cn(
                 'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
                 'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
@@ -440,11 +360,11 @@ export function FinancialPage() {
 
       {loadingSummary ? <Spinner /> : (
         <>
-          {/* KPIs — now scoped to selected period */}
+          {/* KPIs — from dedicated endpoint */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <Metric label={t('financial.totalRevenue')} value={formatCurrency(totalRevenue)} icon={Euro} trend={12} color="text-green-400" />
             <Metric label={t('financial.avgTicket')} value={formatCurrency(avgTicket)} icon={ArrowUpRight} trend={5} color="text-blue-400" />
-            <Metric label={t('financial.completedApts')} value={String(completedApts.length)} icon={CalendarDays} sub={t('financial.ofTotal', { n: periodApts.length })} />
+            <Metric label={t('financial.completedApts')} value={String(completedCount)} icon={CalendarDays} sub={t('financial.ofTotal', { n: totalApts })} />
             <Metric label={t('financial.noShowRate')} value={formatPercent(noShowRate)} icon={Users} trend={noShowRate > 0.1 ? -5 : 3} color="text-amber-400" />
           </div>
 
@@ -532,16 +452,16 @@ export function FinancialPage() {
               <CardContent className="space-y-2.5">
                 {topServices.length === 0 ? (
                   <p className="text-sm text-muted-foreground font-body text-center py-4">{t('common.noResults')}</p>
-                ) : topServices.map(([svcName, rev], i) => {
-                  const pct = (rev / (topServices[0]?.[1] ?? 1)) * 100
+                ) : topServices.map((svc, i) => {
+                  const pct = (svc.revenue / (topServices[0]?.revenue ?? 1)) * 100
                   return (
-                    <div key={svcName}>
+                    <div key={svc.name}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono text-muted-foreground/50 w-4">#{i + 1}</span>
-                          <span className="text-xs font-body text-foreground">{svcName}</span>
+                          <span className="text-xs font-body text-foreground">{svc.name}</span>
                         </div>
-                        <span className="text-xs font-display font-semibold text-foreground">{formatCurrency(rev)}</span>
+                        <span className="text-xs font-display font-semibold text-foreground">{formatCurrency(svc.revenue)}</span>
                       </div>
                       <div className="h-1 rounded-full bg-muted">
                         <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
@@ -561,22 +481,22 @@ export function FinancialPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2.5">
-                  {Object.entries(locationRevMap).length === 0 ? (
+                  {Object.keys(locationRevMap).length === 0 ? (
                     <p className="text-sm text-muted-foreground font-body text-center py-4">{t('common.noResults')}</p>
                   ) : Object.entries(locationRevMap).sort(([, a], [, b]) => b - a).map(([locId, rev]) => {
                     const loc = locations.find(l => l.id === locId)
-                    const pct = (rev / totalRevenue) * 100
+                    const pct = totalRevenue ? rev / totalRevenue : 0
                     return (
                       <div key={locId}>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-body text-foreground">{loc?.name ?? locId}</span>
                           <div className="flex items-center gap-2">
-                            <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(pct / 100)}</Badge>
+                            <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(pct)}</Badge>
                             <span className="text-xs font-display font-semibold text-foreground">{formatCurrency(rev)}</span>
                           </div>
                         </div>
                         <div className="h-1 rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct * 100}%` }} />
                         </div>
                       </div>
                     )

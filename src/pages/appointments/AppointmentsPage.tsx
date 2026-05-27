@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format, isToday, isTomorrow, isYesterday, addDays, subDays } from 'date-fns'
 import { pt as ptLocale, enUS } from 'date-fns/locale'
-import { Search, Filter, CalendarDays, Clock, User, Scissors, CheckCircle2, Ban, XCircle, Phone, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
-import { useAppointments, useEmployees, useClientsFlat, useAllClients, useServices, useUpdateAppointmentStatus } from '@/hooks'
+import { Search, Filter, CalendarDays, Clock, User, Scissors, CheckCircle2, Ban, Phone, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { useAppointments, useEmployees, useClientsFlat, useAllClients, useServices, useUpdateAppointmentStatus, useDailySummary } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, Badge, Avatar, Button, Spinner, EmptyState } from '@/components/ui'
@@ -42,13 +42,17 @@ export function AppointmentsPage() {
     aptId: string; status: AppointmentStatus; label: string
   } | null>(null)
 
-  // ── Data ──────────────────────────────────────────────
+  // ── Daily Summary (dedicated endpoint for card stats) ─
+  const { data: summary, isLoading: summaryLoading } = useDailySummary(dateKey, locationId)
+
+  // ── Full appointments list ───────────────────────────
   const { data: employees  = [] } = useEmployees(locationId)
   const myEmployeeId = isOwnOnly
     ? employees.find(e => e.userId === user?.id)?.id
     : undefined
 
-  const { data: appointments = [], isLoading } = useAppointments({ locationId, startsAt: dateKey, endsAt: dateKey, employeeId: myEmployeeId })
+  const { data: appointments = [], isLoading: aptsLoading } = useAppointments({ locationId, startsAt: dateKey, endsAt: dateKey, employeeId: myEmployeeId })
+  const isLoading = aptsLoading || summaryLoading
   const { data: ownClients   = [] } = useClientsFlat()
   const { data: allClients   = [] } = useAllClients()
   const clients = isSuperAdmin ? allClients : ownClients
@@ -103,8 +107,10 @@ export function AppointmentsPage() {
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a))
   }, [filtered])
 
-  const confirmedCount = appointments.filter(a => toVisibleStatus(a.status) === 'confirmed').length
-  const dayRevenue     = appointments.filter(a => a.status === 'completed').reduce((s, a) => s + (a.price ?? 0), 0)
+  // ✅ Summary from dedicated endpoint (handles backend status casing correctly)
+  const effectiveTotal = summary?.total ?? appointments.length
+  const confirmedCount = summary?.confirmed ?? appointments.filter(a => toVisibleStatus(a.status) === 'confirmed').length
+  const dayRevenue     = summary?.revenue ?? 0
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (empFilter !== 'all' ? 1 : 0)
 
   const isSelectedToday = isToday(selectedDate)
@@ -189,7 +195,7 @@ export function AppointmentsPage() {
       {/* ── Summary strip ──────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
-          { label: i18n.language === 'pt' ? 'Marcações' : 'Appointments', value: String(appointments.length), sub: dateLabel,                        color: 'text-foreground'  },
+          { label: i18n.language === 'pt' ? 'Marcações' : 'Appointments', value: String(effectiveTotal), sub: dateLabel,                        color: 'text-foreground'  },
           { label: t('appointments.confirmed'),                             value: String(confirmedCount),      sub: t('appointments.toDo'),           color: confirmedCount > 0 ? 'text-blue-400' : 'text-foreground' },
           { label: t('appointments.revenueToday'),                         value: formatCurrency(dayRevenue),  sub: t('appointments.concluded'),      color: 'text-green-400'   },
         ].map(s => (

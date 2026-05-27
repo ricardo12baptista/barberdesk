@@ -108,7 +108,15 @@ export function ReportsPage() {
   [allApts, interval])
 
   const completedApts = useMemo(() => apts.filter(a => a.status === 'completed'), [apts])
-  const totalRevenue  = useMemo(() => completedApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0), [completedApts, applyCommission])
+
+  // Use service basePrice as fallback when a.price is undefined
+  const getPriceService = useMemo(() => Object.fromEntries(services.map(s => [s.id, s.basePrice])), [services])
+  const getPrice = useCallback((a: { price?: number | null; serviceId: string }) => {
+    if (a.price != null && a.price > 0) return a.price
+    return getPriceService[a.serviceId] ?? 0
+  }, [getPriceService])
+
+  const totalRevenue  = useMemo(() => completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0), [completedApts, applyCommission, getPrice])
 
   const statusBreakdown = useMemo(() =>
     (['completed', 'confirmed', 'pending', 'cancelled', 'no_show', 'in_progress'] as AppointmentStatus[])
@@ -118,7 +126,7 @@ export function ReportsPage() {
   const empStats = useMemo(() =>
     employees.map(emp => {
       const empApts   = completedApts.filter(a => a.employeeId === emp.id)
-      const revenue   = empApts.reduce((s, a) => s + applyCommission(a.price ?? 0), 0)
+      const revenue   = empApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0)
       const ratings   = empApts.filter(a => a.rating)
       const avgRating = ratings.length ? ratings.reduce((s, a) => s + (a.rating ?? 0), 0) / ratings.length : 0
       return { emp, count: empApts.length, revenue, avgRating }
@@ -128,22 +136,22 @@ export function ReportsPage() {
   const clientStats = useMemo(() =>
     clients.map(c => {
       const ca = completedApts.filter(a => a.clientId === c.id)
-      return { client: c, count: ca.length, revenue: ca.reduce((s, a) => s + applyCommission(a.price ?? 0), 0) }
+      return { client: c, count: ca.length, revenue: ca.reduce((s, a) => s + applyCommission(getPrice(a)), 0) }
     }).filter(c => c.count > 0),
   [clients, completedApts, applyCommission])
 
   const serviceStats = useMemo(() =>
     services.map(svc => {
       const sa = completedApts.filter(a => a.serviceId === svc.id)
-      return { svc, count: sa.length, revenue: sa.reduce((s, a) => s + applyCommission(a.price ?? 0), 0) }
+      return { svc, count: sa.length, revenue: sa.reduce((s, a) => s + applyCommission(getPrice(a)), 0) }
     }).filter(s => s.count > 0).sort((a, b) => b.count - a.count),
   [services, completedApts, applyCommission])
 
   const locationRevMap = useMemo(() =>
     completedApts.reduce((acc, a) => {
-      acc[a.locationId] = (acc[a.locationId] ?? 0) + applyCommission(a.price ?? 0); return acc
+      acc[a.locationId] = (acc[a.locationId] ?? 0) + applyCommission(getPrice(a)); return acc
     }, {} as Record<string, number>),
-  [completedApts, applyCommission])
+  [completedApts, applyCommission, getPrice])
 
   const rangeLabel = useMemo(() => {
     const { start, end } = interval

@@ -274,6 +274,124 @@ export const handlers = [
     return HttpResponse.json(mockRevenueTrend)
   }),
 
+  // ── Financial Summary (mock) ───────────────────────────────────────────────
+  http.get(`${API}/analytics/financial-summary`, async ({ request }) => {
+    await delay(DELAY)
+    const url = new URL(request.url)
+    const locationId   = url.searchParams.get('locationId') ?? undefined
+    const orgId        = url.searchParams.get('organizationId') ?? undefined
+    const period       = url.searchParams.get('period') ?? 'month'
+    const refDateStr   = url.searchParams.get('refDate')
+
+    // Calculate date range based on period
+    const now = refDateStr ? new Date(refDateStr + 'T12:00:00') : new Date()
+    let dateFrom = new Date(now)
+    const dateTo = new Date(now)
+    dateTo.setHours(23, 59, 59, 999)
+
+    switch (period) {
+      case 'day':
+        // Current day only (00:00:00 to 23:59:59)
+        dateFrom.setHours(0, 0, 0, 0)
+        dateTo.setHours(23, 59, 59, 999)
+        break
+      case 'week':
+        // Current week only (Monday to Sunday)
+        dateFrom.setDate(dateFrom.getDate() - dateFrom.getDay() + 1)
+        dateFrom.setHours(0, 0, 0, 0)
+        dateTo.setDate(dateFrom.getDate() + 6)
+        dateTo.setHours(23, 59, 59, 999)
+        break
+      case 'month':
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        dateFrom = new Date(now.getFullYear(), 0, 1)
+        break
+    }
+
+    // Filter appointments for the current org (and optionally location)
+    let allApts = orgId
+      ? mockAppointments.filter(a => {
+          const loc = mockLocations.find(l => l.id === a.locationId)
+          return loc?.organizationId === orgId
+        })
+      : [...mockAppointments]
+
+    if (locationId && locationId !== 'all') {
+      allApts = allApts.filter(a => a.locationId === locationId)
+    }
+
+    // Filter by date range
+    const apts = allApts.filter(a => {
+      try {
+        const aptDate = new Date(a.startsAt)
+        return aptDate >= dateFrom && aptDate <= dateTo
+      } catch {
+        return false
+      }
+    })
+
+    const total = apts.length
+    const completedApts = apts.filter(a => a.status === 'completed')
+    const completedCount = completedApts.length
+    const confirmedCount = apts.filter(a => a.status === 'confirmed').length
+    const pendingCount = apts.filter(a => a.status === 'pending').length
+    const noShowCount = apts.filter(a => a.status === 'no_show').length
+    const cancelledCount = apts.filter(a => a.status === 'cancelled').length
+
+    const getPrice = (a: typeof apts[0]) => {
+      if (a.price != null && a.price > 0) return a.price
+      const svc = mockServices.find(s => s.id === a.serviceId)
+      return svc?.basePrice ?? 0
+    }
+
+    const totalRevenue = completedApts.reduce((s, a) => s + getPrice(a), 0)
+    const avgTicket = completedCount > 0 ? totalRevenue / completedCount : 0
+    const noShowRate = total > 0 ? noShowCount / total : 0
+
+    const revenueByStatus = {
+      completed: totalRevenue,
+      confirmed: apts.filter(a => a.status === 'confirmed').reduce((s, a) => s + getPrice(a), 0),
+      pending: apts.filter(a => a.status === 'pending').reduce((s, a) => s + getPrice(a), 0),
+    }
+
+    const projectedRevenue = revenueByStatus.completed + revenueByStatus.confirmed + revenueByStatus.pending
+
+    // Top services
+    const svcRevMap: Record<string, { name: string; revenue: number }> = {}
+    for (const a of completedApts) {
+      const svc = mockServices.find(s => s.id === a.serviceId)
+      const name = svc?.name ?? a.serviceId
+      if (!svcRevMap[name]) svcRevMap[name] = { name, revenue: 0 }
+      svcRevMap[name].revenue += getPrice(a)
+    }
+    const topServices = Object.values(svcRevMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+
+    // Revenue by location
+    const locationRev: Record<string, number> = {}
+    for (const a of completedApts) {
+      locationRev[a.locationId] = (locationRev[a.locationId] ?? 0) + getPrice(a)
+    }
+
+    return HttpResponse.json({
+      period: url.searchParams.get('period') ?? 'month',
+      total,
+      completedCount,
+      confirmedCount,
+      pendingCount,
+      cancelledCount,
+      noShowCount,
+      totalRevenue,
+      avgTicket,
+      noShowRate,
+      revenueByStatus,
+      projectedRevenue,
+      topServices,
+      locationRevenue: locationRev,
+    })
+  }),
+
 
 
   // ─── Location Settings ────────────────────────────────────────────────────────
