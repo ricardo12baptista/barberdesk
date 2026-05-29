@@ -162,6 +162,30 @@ export interface FinancialSummary {
   locationRevenue: Record<string, number>
 }
 
+export interface ReportsData {
+  total: number
+  completedCount: number
+  totalRevenue: number
+  statusBreakdown: Array<{ status: string; count: number }>
+  employeeStats: Array<{
+    employee: { id: string; name: string }
+    count: number
+    revenue: number
+    avgRating: number
+  }>
+  clientStats: Array<{
+    client: { id: string; name: string; phone: string | null }
+    count: number
+    revenue: number
+  }>
+  serviceStats: Array<{
+    service: { id: string; name: string; color: string }
+    count: number
+    revenue: number
+  }>
+  locationRevenue: Record<string, { name: string; revenue: number }>
+}
+
 export const analyticsApi = {
   getSummary:      (locationId?: string) =>
     apiClient.get('/analytics/summary', { params: { locationId } }),
@@ -169,6 +193,8 @@ export const analyticsApi = {
     apiClient.get('/analytics/revenue-trend', { params: { locationId, period, refDate } }),
   getFinancialSummary: (locationId?: string, period?: string, refDate?: string) =>
     apiClient.get<FinancialSummary>('/analytics/financial-summary', { params: { locationId, period, refDate } }),
+  getReportsData: (params: { startsAt: string; endsAt: string; locationId?: string; employeeId?: string }) =>
+    apiClient.get<ReportsData>('/analytics/reports', { params }),
 }
 
 // ─── Commission ────────────────────────────────────────────────────────────────

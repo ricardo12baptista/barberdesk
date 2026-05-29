@@ -1,11 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BarChart3, TrendingUp, Users, Calendar, Scissors, Star, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react'
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, isWithinInterval, parseISO, format } from 'date-fns'
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, format } from 'date-fns'
 import { pt as ptLocale, enUS } from 'date-fns/locale'
-import { useAppointments, useEmployees, useClientsFlat, useAllClients, useServices, useLocations, useAllLocations } from '@/hooks'
+import { useReportsData, useLocations, useAllLocations } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
-import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Badge, Spinner, Input } from '@/components/ui'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 import type { AppointmentStatus } from '@/models'
@@ -20,8 +19,8 @@ function getRangeInterval(key: RangeKey, customFrom: string, customTo: string) {
     case 'last_3_months': return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) }
     case 'this_year':     return { start: startOfYear(now), end: now }
     case 'custom':        return {
-      start: customFrom ? parseISO(customFrom) : startOfMonth(now),
-      end:   customTo   ? parseISO(customTo)   : endOfMonth(now),
+      start: customFrom ? new Date(customFrom + 'T00:00:00') : startOfMonth(now),
+      end:   customTo   ? new Date(customTo   + 'T23:59:59')   : endOfMonth(now),
     }
   }
 }
@@ -34,7 +33,6 @@ const STATUS_COLORS: Record<AppointmentStatus, string> = {
 export function ReportsPage() {
   const { t, i18n } = useTranslation()
   const { user }           = useAuthStore()
-  const { activeLocation } = useUIStore()
   const isSuperAdmin       = user?.role === 'super_admin'
   const isPartner          = user?.role === 'partner'
   const isEmployee         = user?.role === 'employee'
@@ -42,25 +40,10 @@ export function ReportsPage() {
   const isSelfScoped       = isOwnOnly
   const dateLocale         = i18n.language === 'pt' ? ptLocale : enUS
 
-  // ── In-page location filter (super_admin only) ────────────────────────────────
+  // Reports page has its own location filter, defaults to "Todas as Lojas"
   const [reportLocationId, setReportLocationId] = useState<string | undefined>(undefined)
-  const effectiveLocationId = reportLocationId ?? activeLocation?.id ?? user?.locationId ?? undefined
-  const queryLocationId = isSuperAdmin ? effectiveLocationId : (user?.locationId ?? undefined)
+  const queryLocationId = isSuperAdmin ? (reportLocationId ?? undefined) : (user?.locationId ?? undefined)
 
-  // Single employee lookup
-  const { data: employees = [] } = useEmployees(queryLocationId)
-  const myEmployee    = isOwnOnly ? employees.find(e => e.userId === user?.id) : undefined
-  const myEmpId       = myEmployee?.id
-  const commissionPct = myEmployee?.commissionPercent ?? 100
-  const applyCommission = useCallback((price: number) => isOwnOnly ? price * (commissionPct / 100) : price, [isOwnOnly, commissionPct])
-  const { data: allApts   = [], isLoading } = useAppointments({
-    locationId: queryLocationId,
-    employeeId: myEmpId,
-  })
-  const { data: ownClients = [] } = useClientsFlat()
-  const { data: allClients = [] } = useAllClients()
-  const clients = isSuperAdmin ? allClients : ownClients
-  const { data: services  = [] } = useServices()
   const { data: ownLocations = [] } = useLocations()
   const { data: allLocations = [] } = useAllLocations()
   const locations         = isSuperAdmin ? allLocations : ownLocations
@@ -103,55 +86,23 @@ export function ReportsPage() {
 
   const interval = useMemo(() => getRangeInterval(rangeKey, customFrom, customTo), [rangeKey, customFrom, customTo])
 
-  const apts = useMemo(() =>
-    allApts.filter(a => { try { return isWithinInterval(parseISO(a.startsAt), interval) } catch { return false } }),
-  [allApts, interval])
+  // ✅ Use dedicated reports endpoint
+  const dateKeyFrom = format(interval.start, 'yyyy-MM-dd')
+  const dateKeyTo   = format(interval.end,   'yyyy-MM-dd')
+  const { data: reports, isLoading } = useReportsData({
+    startsAt: dateKeyFrom,
+    endsAt:   dateKeyTo,
+    locationId: queryLocationId,
+  })
 
-  const completedApts = useMemo(() => apts.filter(a => a.status === 'completed'), [apts])
-
-  // Use service basePrice as fallback when a.price is undefined
-  const getPriceService = useMemo(() => Object.fromEntries(services.map(s => [s.id, s.basePrice])), [services])
-  const getPrice = useCallback((a: { price?: number | null; serviceId: string }) => {
-    if (a.price != null && a.price > 0) return a.price
-    return getPriceService[a.serviceId] ?? 0
-  }, [getPriceService])
-
-  const totalRevenue  = useMemo(() => completedApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0), [completedApts, applyCommission, getPrice])
-
-  const statusBreakdown = useMemo(() =>
-    (['completed', 'confirmed', 'pending', 'cancelled', 'no_show', 'in_progress'] as AppointmentStatus[])
-      .map(status => ({ status, count: apts.filter(a => a.status === status).length })),
-  [apts])
-
-  const empStats = useMemo(() =>
-    employees.map(emp => {
-      const empApts   = completedApts.filter(a => a.employeeId === emp.id)
-      const revenue   = empApts.reduce((s, a) => s + applyCommission(getPrice(a)), 0)
-      const ratings   = empApts.filter(a => a.rating)
-      const avgRating = ratings.length ? ratings.reduce((s, a) => s + (a.rating ?? 0), 0) / ratings.length : 0
-      return { emp, count: empApts.length, revenue, avgRating }
-    }).sort((a, b) => b.revenue - a.revenue),
-  [employees, completedApts, applyCommission])
-
-  const clientStats = useMemo(() =>
-    clients.map(c => {
-      const ca = completedApts.filter(a => a.clientId === c.id)
-      return { client: c, count: ca.length, revenue: ca.reduce((s, a) => s + applyCommission(getPrice(a)), 0) }
-    }).filter(c => c.count > 0),
-  [clients, completedApts, applyCommission])
-
-  const serviceStats = useMemo(() =>
-    services.map(svc => {
-      const sa = completedApts.filter(a => a.serviceId === svc.id)
-      return { svc, count: sa.length, revenue: sa.reduce((s, a) => s + applyCommission(getPrice(a)), 0) }
-    }).filter(s => s.count > 0).sort((a, b) => b.count - a.count),
-  [services, completedApts, applyCommission])
-
-  const locationRevMap = useMemo(() =>
-    completedApts.reduce((acc, a) => {
-      acc[a.locationId] = (acc[a.locationId] ?? 0) + applyCommission(getPrice(a)); return acc
-    }, {} as Record<string, number>),
-  [completedApts, applyCommission, getPrice])
+  const totalApts      = reports?.total ?? 0
+  const totalRevenue   = reports?.totalRevenue ?? 0
+  const completedCount = reports?.completedCount ?? 0
+  const statusBreakdown = reports?.statusBreakdown ?? []
+  const empStats       = reports?.employeeStats ?? []
+  const clientStats    = reports?.clientStats ?? []
+  const serviceStats   = reports?.serviceStats ?? []
+  const locationRevMap = reports?.locationRevenue ?? {}
 
   const rangeLabel = useMemo(() => {
     const { start, end } = interval
@@ -164,10 +115,10 @@ export function ReportsPage() {
     <div>
       <PageHeader
         title={t('nav.reports')}
-        subtitle={`${apts.length} ${t('reports.appointments').toLowerCase()} · ${formatCurrency(totalRevenue)} · ${rangeLabel}`}
+        subtitle={`${totalApts} ${t('reports.appointments').toLowerCase()} · ${formatCurrency(totalRevenue)} · ${rangeLabel}`}
       />
 
-      {/* ── Location filter for super_admin ──────────────────────────────────── */}
+      {/* ── Location filter (super_admin only) defaults to "Todas as Lojas" ── */}
       {isSuperAdmin && locations.length > 1 && (
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
@@ -224,36 +175,16 @@ export function ReportsPage() {
         <>
           {tab === 'overview' && (
             <div className="space-y-4">
-              {/* Personal performance banner for employee/partner */}
-              {isSelfScoped && (
-                <div className="flex items-center gap-4 p-4 rounded-2xl border border-primary/20 bg-primary/5">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg font-display font-bold text-primary">
-                      {apts.length > 0 ? Math.round((completedApts.length / apts.length) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-display font-semibold text-foreground">O meu desempenho</p>
-                    <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {completedApts.length} marcações concluídas · {formatCurrency(totalRevenue)} ganhos (comissão {commissionPct}%) · {new Set(completedApts.map(a => a.clientId)).size} clientes
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-display font-bold text-foreground">{formatCurrency(completedApts.length ? totalRevenue / completedApts.length : 0)}</p>
-                    <p className="text-[11px] text-muted-foreground font-body">ticket médio</p>
-                  </div>
-                </div>
-              )}
               <div className={`grid gap-3 ${isSelfScoped ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
                 {[
-                  { label: t('reports.totalApts'),     value: String(apts.length),          icon: Calendar,   color: 'text-blue-400'  },
-                  { label: t('reports.completed'),      value: String(completedApts.length), icon: TrendingUp, color: 'text-green-400' },
+                  { label: t('reports.totalApts'),     value: String(totalApts),          icon: Calendar,   color: 'text-blue-400'  },
+                  { label: t('reports.completed'),      value: String(completedCount),      icon: TrendingUp, color: 'text-green-400' },
                   ...(!isSelfScoped ? [
                     { label: t('reports.totalRevenue'),  value: formatCurrency(totalRevenue), icon: BarChart3,  color: 'text-primary'   },
-                    { label: t('reports.uniqueClients'), value: String(new Set(completedApts.map(a => a.clientId)).size), icon: Users, color: 'text-amber-400' },
+                    { label: t('reports.uniqueClients'), value: String(new Set(clientStats.map(c => c.client.id)).size), icon: Users, color: 'text-amber-400' },
                   ] : [
                     { label: 'Os meus ganhos',           value: formatCurrency(totalRevenue), icon: BarChart3,  color: 'text-primary'   },
-                    { label: 'Clientes atendidos',        value: String(new Set(completedApts.map(a => a.clientId)).size), icon: Users, color: 'text-amber-400' },
+                    { label: 'Clientes atendidos',        value: String(new Set(clientStats.map(c => c.client.id)).size), icon: Users, color: 'text-amber-400' },
                   ]),
                 ].map(m => (
                   <Card key={m.label}>
@@ -272,21 +203,21 @@ export function ReportsPage() {
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reports.statusBreakdown')}</CardTitle></CardHeader>
                   <CardContent>
-                    {apts.length === 0 ? (
+                    {totalApts === 0 ? (
                       <p className="text-sm text-muted-foreground font-body text-center py-6">{noDataMsg}</p>
                     ) : (
                       <div className="flex flex-col gap-2.5">
                         {statusBreakdown.filter(d => d.count > 0).map(d => (
                           <div key={d.status}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-body text-muted-foreground">{STATUS_LABELS[d.status]}</span>
+                              <span className="text-xs font-body text-muted-foreground">{STATUS_LABELS[d.status as AppointmentStatus] ?? d.status}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-body text-muted-foreground">{formatPercent(d.count / apts.length)}</span>
+                                <span className="text-xs font-body text-muted-foreground">{formatPercent(d.count / totalApts)}</span>
                                 <span className="text-xs font-display font-semibold text-foreground tabular-nums w-5 text-right">{d.count}</span>
                               </div>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={cn('h-full rounded-full', STATUS_COLORS[d.status])} style={{ width: `${(d.count / apts.length) * 100}%` }} />
+                              <div className={cn('h-full rounded-full', STATUS_COLORS[d.status as AppointmentStatus] ?? 'bg-slate-500')} style={{ width: `${(d.count / totalApts) * 100}%` }} />
                             </div>
                           </div>
                         ))}
@@ -307,24 +238,20 @@ export function ReportsPage() {
                         <p className="text-sm text-muted-foreground font-body text-center py-6">{t('reports.noRevenue')}</p>
                       ) : (
                         <div className="space-y-2.5">
-                          {Object.entries(locationRevMap).sort(([, a], [, b]) => b - a).map(([locId, rev]) => {
-                            const loc = locations.find(l => l.id === locId)
-                            const pct = totalRevenue ? rev / totalRevenue : 0
-                            return (
-                              <div key={locId}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-body text-foreground">{loc?.name ?? locId}</span>
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(pct)}</Badge>
-                                    <span className="text-xs font-display font-semibold text-foreground tabular-nums">{formatCurrency(rev)}</span>
-                                  </div>
-                                </div>
-                                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct * 100}%` }} />
+                          {Object.entries(locationRevMap).sort(([, a], [, b]) => b.revenue - a.revenue).map(([locId, loc]) => (
+                            <div key={locId}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-body text-foreground">{loc.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge className="text-[10px] border-0 bg-muted text-muted-foreground">{formatPercent(loc.revenue / (totalRevenue || 1))}</Badge>
+                                  <span className="text-xs font-display font-semibold text-foreground tabular-nums">{formatCurrency(loc.revenue)}</span>
                                 </div>
                               </div>
-                            )
-                          })}
+                              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full rounded-full bg-primary/60" style={{ width: `${(loc.revenue / (totalRevenue || 1)) * 100}%` }} />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </CardContent>
@@ -345,20 +272,20 @@ export function ReportsPage() {
                 <tbody className="divide-y divide-border">
                   {empStats.length === 0 ? (
                     <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground font-body">{noDataMsg}</td></tr>
-                  ) : empStats.map(({ emp, count, revenue, avgRating }, i) => (
-                    <tr key={emp.id} className="hover:bg-muted/20 transition-colors">
+                  ) : empStats.map((emp, i) => (
+                    <tr key={emp.employee.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono text-muted-foreground/40 w-4">#{i+1}</span>
-                          <span className="font-body font-medium text-foreground">{emp.name}</span>
+                          <span className="font-body font-medium text-foreground">{emp.employee.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-body text-foreground tabular-nums">{count}</td>
-                      <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(revenue)}</td>
-                      <td className="px-4 py-3 font-body text-muted-foreground tabular-nums">{count ? formatCurrency(revenue / count) : '—'}</td>
+                      <td className="px-4 py-3 font-body text-foreground tabular-nums">{emp.count}</td>
+                      <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(emp.revenue)}</td>
+                      <td className="px-4 py-3 font-body text-muted-foreground tabular-nums">{emp.count ? formatCurrency(emp.revenue / emp.count) : '—'}</td>
                       <td className="px-4 py-3">
-                        {avgRating > 0
-                          ? <span className="flex items-center gap-1 text-amber-400 font-body text-xs"><Star className="w-3 h-3 fill-amber-400" />{avgRating.toFixed(1)}</span>
+                        {emp.avgRating > 0
+                          ? <span className="flex items-center gap-1 text-amber-400 font-body text-xs"><Star className="w-3 h-3 fill-amber-400" />{emp.avgRating.toFixed(1)}</span>
                           : <span className="text-muted-foreground">—</span>
                         }
                       </td>
@@ -373,7 +300,7 @@ export function ReportsPage() {
             const sorted = [...clientStats].sort((a, b) => {
               const dir = clientSort.dir === 'asc' ? 1 : -1
               switch (clientSort.col) {
-                case 'name':      return dir * a.client.name.localeCompare(b.client.name)
+                case 'name':      return dir * (a.client.name || '').localeCompare(b.client.name || '')
                 case 'count':     return dir * (a.count - b.count)
                 case 'revenue':   return dir * (a.revenue - b.revenue)
                 case 'avgTicket': return dir * ((a.revenue / a.count) - (b.revenue / b.count))
@@ -421,22 +348,22 @@ export function ReportsPage() {
                   <tbody className="divide-y divide-border">
                     {paginated.length === 0 ? (
                       <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground font-body">{noDataMsg}</td></tr>
-                    ) : paginated.map(({ client, count, revenue }, i) => {
+                    ) : paginated.map((cli, i) => {
                       const globalRank = (clientPage - 1) * CLIENT_PAGE_SIZE + i + 1
                       return (
-                        <tr key={client.id} className="hover:bg-muted/20 transition-colors">
+                        <tr key={cli.client.id} className="hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono text-muted-foreground/40 w-5 text-right">#{globalRank}</span>
                               <div>
-                                <p className="font-body font-medium text-foreground">{client.name}</p>
-                                <p className="text-[10px] text-muted-foreground font-body">{client.phone}</p>
+                                <p className="font-body font-medium text-foreground">{cli.client.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-body">{cli.client.phone}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-body text-foreground tabular-nums">{count}</td>
-                          <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(revenue)}</td>
-                          <td className="px-4 py-3 font-body text-muted-foreground tabular-nums">{formatCurrency(revenue / count)}</td>
+                          <td className="px-4 py-3 font-body text-foreground tabular-nums">{cli.count}</td>
+                          <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(cli.revenue)}</td>
+                          <td className="px-4 py-3 font-body text-muted-foreground tabular-nums">{formatCurrency(cli.revenue / cli.count)}</td>
                         </tr>
                       )
                     })}
@@ -492,24 +419,24 @@ export function ReportsPage() {
                 <tbody className="divide-y divide-border">
                   {serviceStats.length === 0 ? (
                     <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground font-body">{noDataMsg}</td></tr>
-                  ) : serviceStats.map(({ svc, count, revenue }) => (
-                    <tr key={svc.id} className="hover:bg-muted/20 transition-colors">
+                  ) : serviceStats.map(svc => (
+                    <tr key={svc.service.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: svc.color }} />
-                          <span className="font-body font-medium text-foreground">{svc.name}</span>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: svc.service.color }} />
+                          <span className="font-body font-medium text-foreground">{svc.service.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-body text-foreground tabular-nums">{count}</td>
-                      <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(revenue)}</td>
+                      <td className="px-4 py-3 font-body text-foreground tabular-nums">{svc.count}</td>
+                      <td className="px-4 py-3 font-display font-semibold text-foreground tabular-nums">{formatCurrency(svc.revenue)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden max-w-[80px]">
                             <div className="h-full rounded-full bg-primary/60"
-                              style={{ width: `${completedApts.length ? (count / completedApts.length) * 100 : 0}%` }} />
+                              style={{ width: `${completedCount ? (svc.count / completedCount) * 100 : 0}%` }} />
                           </div>
                           <span className="text-xs font-body text-muted-foreground tabular-nums">
-                            {completedApts.length ? formatPercent(count / completedApts.length) : '0%'}
+                            {completedCount ? formatPercent(svc.count / completedCount) : '0%'}
                           </span>
                         </div>
                       </td>

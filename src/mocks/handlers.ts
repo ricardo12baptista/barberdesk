@@ -274,6 +274,80 @@ export const handlers = [
     return HttpResponse.json(mockRevenueTrend)
   }),
 
+  // ── Reports (mock) ──────────────────────────────────────────────────────────
+  http.get(`${API}/analytics/reports`, async ({ request }) => {
+    await delay(DELAY)
+    const url = new URL(request.url)
+    const locationId = url.searchParams.get('locationId') ?? undefined
+    const employeeId = url.searchParams.get('employeeId') ?? undefined
+    const startsAt   = url.searchParams.get('startsAt') ?? ''
+    const endsAt     = url.searchParams.get('endsAt') ?? ''
+
+    // Start with all appointments (org-scoping is done by JWT on real backend)
+    let apts = [...mockAppointments]
+    if (locationId && locationId !== 'all') apts = apts.filter(a => a.locationId === locationId)
+    if (employeeId) apts = apts.filter(a => a.employeeId === employeeId)
+    if (startsAt && endsAt) {
+      apts = apts.filter(a => {
+        const d = a.startsAt.slice(0, 10)
+        return d >= startsAt && d <= endsAt
+      })
+    }
+
+    const getPrice = (a: typeof apts[0]) => a.price && a.price > 0 ? a.price : (mockServices.find(s => s.id === a.serviceId)?.basePrice ?? 0)
+
+    const completedApts = apts.filter(a => a.status === 'completed')
+    const completedCount = completedApts.length
+    const totalRevenue = completedApts.reduce((s, a) => s + getPrice(a), 0)
+
+    const statusBreakdown = (['completed', 'confirmed', 'pending', 'cancelled', 'no_show', 'in_progress'] as const)
+      .map(status => ({ status, count: apts.filter(a => a.status === status).length }))
+
+    const empStats = Array.from(new Set(apts.map(a => a.employeeId)))
+      .map(empId => {
+        const emp = mockEmployees.find(e => e.id === empId)
+        const ea = completedApts.filter(a => a.employeeId === empId)
+        return { employee: { id: empId, name: emp?.name ?? empId }, count: ea.length, revenue: ea.reduce((s, a) => s + getPrice(a), 0), avgRating: 0 }
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+
+    const clientStats = Array.from(new Set(apts.map(a => a.clientId)))
+      .map(cliId => {
+        const cli = mockClients.find(c => c.id === cliId)
+        const ca = completedApts.filter(a => a.clientId === cliId)
+        return { client: { id: cliId, name: cli?.name ?? cliId, phone: cli?.phone ?? null }, count: ca.length, revenue: ca.reduce((s, a) => s + getPrice(a), 0) }
+      })
+      .filter(c => c.count > 0)
+
+    const serviceStats = Array.from(new Set(apts.map(a => a.serviceId)))
+      .map(svcId => {
+        const svc = mockServices.find(s => s.id === svcId)
+        const sa = completedApts.filter(a => a.serviceId === svcId)
+        return { service: { id: svcId, name: svc?.name ?? svcId, color: svc?.color ?? '#6366f1' }, count: sa.length, revenue: sa.reduce((s, a) => s + getPrice(a), 0) }
+      })
+      .filter(s => s.count > 0)
+      .sort((a, b) => b.count - a.count)
+
+    const locRev: Record<string, { name: string; revenue: number }> = {}
+    completedApts.forEach(a => {
+      const loc = mockLocations.find(l => l.id === a.locationId)
+      const name = loc?.name ?? a.locationId
+      if (!locRev[a.locationId]) locRev[a.locationId] = { name, revenue: 0 }
+      locRev[a.locationId].revenue += getPrice(a)
+    })
+
+    return HttpResponse.json({
+      total: apts.length,
+      completedCount,
+      totalRevenue,
+      statusBreakdown,
+      employeeStats: empStats,
+      clientStats,
+      serviceStats,
+      locationRevenue: locRev,
+    })
+  }),
+
   // ── Financial Summary (mock) ───────────────────────────────────────────────
   http.get(`${API}/analytics/financial-summary`, async ({ request }) => {
     await delay(DELAY)

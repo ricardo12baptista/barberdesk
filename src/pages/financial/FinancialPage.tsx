@@ -208,7 +208,7 @@ export function FinancialPage() {
   const isSuperAdmin = user?.role === 'super_admin'
 
   const [finLocationId, setFinLocationId] = useState<string | undefined>(undefined)
-  const effectiveLocationId = finLocationId ?? activeLocation?.id ?? user?.locationId ?? undefined
+  const effectiveLocationId = isSuperAdmin ? (finLocationId ?? undefined) : (activeLocation?.id ?? user?.locationId ?? undefined)
 
   const { data: ownLocations = [] } = useLocations()
   const { data: allLocations = [] } = useAllLocations()

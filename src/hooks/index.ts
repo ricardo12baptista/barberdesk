@@ -11,6 +11,7 @@ import {
   CreateEmployeeData,
   DailySummary,
   FinancialSummary,
+  ReportsData,
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
 import type { Appointment, AppointmentStatus, Client, Location, Service } from '@/models'
@@ -197,6 +198,15 @@ export const useFinancialSummary = (locationId?: string, period?: string, refDat
   useQuery<FinancialSummary>({
     queryKey: ['analytics', 'financial-summary', locationId, period, refDate],
     queryFn:  () => analyticsApi.getFinancialSummary(locationId, period, refDate).then(r => r.data),
+    staleTime: 1000 * 60 * 2,
+  })
+
+// ✅ Dedicated endpoint for reports data
+export const useReportsData = (params: { startsAt: string; endsAt: string; locationId?: string; employeeId?: string }) =>
+  useQuery<ReportsData>({
+    queryKey: ['analytics', 'reports', params],
+    queryFn:  () => analyticsApi.getReportsData(params).then(r => r.data),
+    enabled:  !!params.startsAt && !!params.endsAt,
     staleTime: 1000 * 60 * 2,
   })
 
