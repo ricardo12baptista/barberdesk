@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, TrendingUp, Users, Calendar, Scissors, Star, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react'
+import { BarChart3, TrendingUp, Users, Calendar as CalendarIcon, Scissors, Star, Building2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react'
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, format } from 'date-fns'
 import { pt as ptLocale, enUS } from 'date-fns/locale'
 import { useReportsData, useLocations, useAllLocations } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
-import { PageHeader, Card, CardContent, CardHeader, CardTitle, Badge, Spinner, Input } from '@/components/ui'
+import { PageHeader, Card, CardContent, CardHeader, CardTitle, Badge, Spinner } from '@/components/ui'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 import type { AppointmentStatus } from '@/models'
 
@@ -40,7 +42,6 @@ export function ReportsPage() {
   const isSelfScoped       = isOwnOnly
   const dateLocale         = i18n.language === 'pt' ? ptLocale : enUS
 
-  // Reports page has its own location filter, defaults to "Todas as Lojas"
   const [reportLocationId, setReportLocationId] = useState<string | undefined>(undefined)
   const queryLocationId = isSuperAdmin ? (reportLocationId ?? undefined) : (user?.locationId ?? undefined)
 
@@ -84,7 +85,27 @@ export function ReportsPage() {
     ? ALL_TABS.filter(t => t.key !== 'employees')
     : ALL_TABS
 
-  const interval = useMemo(() => getRangeInterval(rangeKey, customFrom, customTo), [rangeKey, customFrom, customTo])
+  // ── State for the DateRangePicker ──────────────────────────────────────────
+  const [rangeDate, setRangeDate] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: new Date(),
+    to: undefined,
+  })
+
+  const interval = useMemo(() => {
+    if (rangeKey !== 'custom') return getRangeInterval(rangeKey, customFrom, customTo)
+    return {
+      start: rangeDate.from ?? startOfMonth(new Date()),
+      end: rangeDate.to ?? endOfMonth(new Date()),
+    }
+  }, [rangeKey, customFrom, customTo, rangeDate])
+
+  // Sync customFrom/customTo with rangeDate
+  useMemo(() => {
+    if (rangeKey === 'custom') {
+      if (rangeDate.from) setCustomFrom(format(rangeDate.from, 'yyyy-MM-dd'))
+      if (rangeDate.to) setCustomTo(format(rangeDate.to, 'yyyy-MM-dd'))
+    }
+  }, [rangeKey, rangeDate])
 
   // ✅ Use dedicated reports endpoint
   const dateKeyFrom = format(interval.start, 'yyyy-MM-dd')
@@ -110,6 +131,30 @@ export function ReportsPage() {
   }, [interval, dateLocale])
 
   const noDataMsg = t('reports.noDataPeriod')
+
+  // Format date for display in the trigger button
+  const dateDisplay = rangeDate.from
+    ? rangeDate.to
+      ? `${format(rangeDate.from, 'dd/MM/yyyy')} - ${format(rangeDate.to, 'dd/MM/yyyy')}`
+      : format(rangeDate.from, 'dd/MM/yyyy')
+    : ''
+
+  const handleCustomRangeSelect = (range: { from: Date | undefined; to: Date | undefined }) => {
+    setRangeDate(range)
+    if (range.from) setCustomFrom(format(range.from, 'yyyy-MM-dd'))
+    if (range.to) setCustomTo(format(range.to, 'yyyy-MM-dd'))
+  }
+
+  const handleCustomClick = () => {
+    setRangeKey('custom')
+    setClientPage(1)
+    // Initialize with current month if empty
+    if (!customFrom && !customTo) {
+      const now = new Date()
+      setRangeDate({ from: startOfMonth(now), to: undefined })
+      setCustomFrom(format(startOfMonth(now), 'yyyy-MM-dd'))
+    }
+  }
 
   return (
     <div>
@@ -144,7 +189,7 @@ export function ReportsPage() {
       <div className="flex flex-wrap items-center gap-2 mb-5">
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           {RANGES.map(r => (
-            <button key={r.key} onClick={() => { setRangeKey(r.key); setClientPage(1) }}
+            <button key={r.key} onClick={r.key === 'custom' ? handleCustomClick : () => { setRangeKey(r.key); setClientPage(1) }}
               className={cn('h-7 px-3 rounded-md text-xs font-body font-medium transition-all',
                 rangeKey === r.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
@@ -152,11 +197,34 @@ export function ReportsPage() {
           ))}
         </div>
         {rangeKey === 'custom' && (
-          <div className="flex items-center gap-2">
-            <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-8 w-36 text-xs" />
-            <span className="text-xs text-muted-foreground font-body">{t('reports.dateTo')}</span>
-            <Input type="date" value={customTo}   onChange={e => setCustomTo(e.target.value)}   className="h-8 w-36 text-xs" />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'h-8 w-[260px] rounded-lg border border-input bg-transparent px-3 py-1 text-xs font-body text-left',
+                  'text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors',
+                  'flex items-center gap-2',
+                  !rangeDate.from && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="flex-1 truncate">
+                  {dateDisplay || 'Selecionar datas'}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={rangeDate}
+                onSelect={handleCustomRangeSelect as any}
+                numberOfMonths={2}
+                locale={i18n.language === 'pt' ? ptLocale : enUS}
+                startMonth={new Date(2020, 0, 1)}
+                endMonth={new Date(2030, 11, 31)}
+              />
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 
@@ -177,7 +245,7 @@ export function ReportsPage() {
             <div className="space-y-4">
               <div className={`grid gap-3 ${isSelfScoped ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
                 {[
-                  { label: t('reports.totalApts'),     value: String(totalApts),          icon: Calendar,   color: 'text-blue-400'  },
+                  { label: t('reports.totalApts'),     value: String(totalApts),          icon: CalendarIcon,   color: 'text-blue-400'  },
                   { label: t('reports.completed'),      value: String(completedCount),      icon: TrendingUp, color: 'text-green-400' },
                   ...(!isSelfScoped ? [
                     { label: t('reports.totalRevenue'),  value: formatCurrency(totalRevenue), icon: BarChart3,  color: 'text-primary'   },
