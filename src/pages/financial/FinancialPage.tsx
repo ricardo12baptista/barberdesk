@@ -362,10 +362,10 @@ export function FinancialPage() {
         <>
           {/* KPIs — from dedicated endpoint */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-            <Metric label={t('financial.totalRevenue')} value={formatCurrency(totalRevenue)} icon={Euro} trend={12} color="text-green-400" />
-            <Metric label={t('financial.avgTicket')} value={formatCurrency(avgTicket)} icon={ArrowUpRight} trend={5} color="text-blue-400" />
+            <Metric label={t('financial.totalRevenue')} value={formatCurrency(totalRevenue)} icon={Euro} color="text-green-400" />
+            <Metric label={t('financial.avgTicket')} value={formatCurrency(avgTicket)} icon={ArrowUpRight} color="text-blue-400" />
             <Metric label={t('financial.completedApts')} value={String(completedCount)} icon={CalendarDays} sub={t('financial.ofTotal', { n: totalApts })} />
-            <Metric label={t('financial.noShowRate')} value={formatPercent(noShowRate)} icon={Users} trend={noShowRate > 0.1 ? -5 : 3} color="text-amber-400" />
+            <Metric label={t('financial.noShowRate')} value={formatPercent(noShowRate)} icon={Users} color="text-amber-400" />
           </div>
 
           {/* Chart + projection */}

@@ -14,7 +14,7 @@ import {
   mockLocationClosures,
   mockLocationSettings,
   mockEmployeeAbsences,
-  mockRevenueTrend,
+  
   mockCredentials,
 } from './data/seed'
 
@@ -269,9 +269,175 @@ export const handlers = [
     })
   }),
 
-  http.get(`${API}/analytics/revenue-trend`, async () => {
+  http.get(`${API}/analytics/revenue-trend`, async ({ request }) => {
     await delay(DELAY)
-    return HttpResponse.json(mockRevenueTrend)
+    const url = new URL(request.url)
+    const locationId   = url.searchParams.get('locationId') ?? undefined
+    const orgId        = url.searchParams.get('organizationId') ?? undefined
+    const period       = url.searchParams.get('period') ?? 'day'
+    const refDateStr   = url.searchParams.get('refDate')
+
+    const now = refDateStr ? new Date(refDateStr + 'T12:00:00') : new Date()
+
+    // Helper functions (same as backend)
+    function formatDate(d: Date): string {
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    }
+
+    function formatMonth(d: Date): string {
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      return `${yyyy}-${mm}`
+    }
+
+    function subDays(d: Date, n: number): Date {
+      const r = new Date(d)
+      r.setDate(r.getDate() - n)
+      return r
+    }
+
+    function subWeeks(d: Date, n: number): Date {
+      return subDays(d, n * 7)
+    }
+
+    function startOfMonth(d: Date): Date {
+      const r = new Date(d)
+      r.setDate(1)
+      r.setHours(0, 0, 0, 0)
+      return r
+    }
+
+    function endOfMonth(d: Date): Date {
+      const r = new Date(d)
+      r.setMonth(r.getMonth() + 1)
+      r.setDate(0)
+      r.setHours(23, 59, 59, 999)
+      return r
+    }
+
+    function getMonday(date: Date): Date {
+      const d = new Date(date)
+      d.setHours(0, 0, 0, 0)
+      const day = d.getDay()
+      const diff = day === 0 ? -6 : 1 - day
+      d.setDate(d.getDate() + diff)
+      return d
+    }
+
+    const MONTH_NAMES_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+    // Filter appointments for org
+    let allApts = orgId
+      ? mockAppointments.filter(a => {
+          const loc = mockLocations.find(l => l.id === a.locationId)
+          return loc?.organizationId === orgId
+        })
+      : [...mockAppointments]
+
+    if (locationId && locationId !== 'all') {
+      allApts = allApts.filter(a => a.locationId === locationId)
+    }
+
+    // Only completed appointments contribute to revenue trend
+    const completedApts = allApts.filter(a => a.status === 'completed')
+
+    const getPrice = (a: typeof completedApts[0]) => {
+      if (a.price != null && a.price > 0) return a.price
+      const svc = mockServices.find(s => s.id === a.serviceId)
+      return svc?.basePrice ?? 0
+    }
+
+    interface TrendItem { date: string; revenue: number; appointments: number; label: string }
+    const trendData: TrendItem[] = []
+
+    const dateTo = new Date(now)
+    dateTo.setHours(23, 59, 59, 999)
+
+    switch (period) {
+      case 'day': {
+        const dateFrom = subDays(now, 13)
+        dateFrom.setHours(0, 0, 0, 0)
+        const revMap = new Map<string, number>()
+        const aptMap = new Map<string, number>()
+        for (const a of completedApts) {
+          if (!a.startsAt) continue
+          const dStr = a.startsAt.slice(0, 10)
+          if (dStr >= formatDate(dateFrom) && dStr <= formatDate(dateTo)) {
+            revMap.set(dStr, (revMap.get(dStr) || 0) + getPrice(a))
+            aptMap.set(dStr, (aptMap.get(dStr) || 0) + 1)
+          }
+        }
+        for (let i = 0; i < 14; i++) {
+          const d = subDays(dateFrom, -i)
+          const key = formatDate(d)
+          trendData.push({ date: key, revenue: revMap.get(key) || 0, appointments: aptMap.get(key) || 0, label: '' })
+        }
+        break
+      }
+      case 'week': {
+        const dateFrom = subWeeks(now, 13)
+        dateFrom.setHours(0, 0, 0, 0)
+        const startMonday = getMonday(dateFrom)
+        for (let i = 0; i < 14; i++) {
+          const monday = new Date(startMonday)
+          monday.setDate(monday.getDate() + i * 7)
+          const key = formatDate(monday)
+          const wkStart = new Date(monday)
+          const wkEnd = new Date(monday)
+          wkEnd.setDate(wkEnd.getDate() + 7)
+          const aptsInWeek = completedApts.filter(a => {
+            if (!a.startsAt) return false
+            const d = new Date(a.startsAt)
+            return d >= wkStart && d < wkEnd
+          })
+          const rev = aptsInWeek.reduce((s, a) => s + getPrice(a), 0)
+          const dayNum = monday.getDate()
+          trendData.push({ date: key, revenue: rev, appointments: aptsInWeek.length, label: `${dayNum} ${MONTH_NAMES_PT[monday.getMonth()]}` })
+        }
+        break
+      }
+      case 'month': {
+        const dateFrom = startOfMonth(now)
+        const revMap = new Map<string, number>()
+        const aptMap = new Map<string, number>()
+        for (const a of completedApts) {
+          if (!a.startsAt) continue
+          const dStr = a.startsAt.slice(0, 10)
+          if (dStr >= formatDate(dateFrom) && dStr <= formatDate(dateTo)) {
+            revMap.set(dStr, (revMap.get(dStr) || 0) + getPrice(a))
+            aptMap.set(dStr, (aptMap.get(dStr) || 0) + 1)
+          }
+        }
+        const lastDay = endOfMonth(now).getDate()
+        for (let day = 1; day <= lastDay; day++) {
+          const d = new Date(now.getFullYear(), now.getMonth(), day)
+          const key = formatDate(d)
+          trendData.push({ date: key, revenue: revMap.get(key) || 0, appointments: aptMap.get(key) || 0, label: '' })
+        }
+        break
+      }
+      case 'year': {
+        for (let month = 0; month < 12; month++) {
+          const mStart = new Date(now.getFullYear(), month, 1)
+          mStart.setHours(0, 0, 0, 0)
+          const mEnd = new Date(now.getFullYear(), month + 1, 0, 23, 59, 59, 999)
+          const aptsFiltered = completedApts.filter(a => {
+            if (!a.startsAt) return false
+            const d = new Date(a.startsAt)
+            return d >= mStart && d <= mEnd
+          })
+          const rev = aptsFiltered.reduce((s, a) => s + getPrice(a), 0)
+          trendData.push({ date: formatMonth(mStart), revenue: rev, appointments: aptsFiltered.length, label: MONTH_NAMES_PT[month] })
+        }
+        break
+      }
+    }
+
+    const mode = period === 'year' ? 'monthly' : period === 'week' ? 'weekly' : 'daily'
+    return HttpResponse.json({ data: trendData, mode })
   }),
 
   // ── Reports (mock) ──────────────────────────────────────────────────────────

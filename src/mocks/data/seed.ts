@@ -36,7 +36,6 @@ import type { Organization, Location, User, Employee, Client, Service, Appointme
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 const today = new Date()
-const d  = (h: number, m = 0) => { const dt = new Date(today); dt.setHours(h, m, 0, 0); return dt.toISOString() }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
