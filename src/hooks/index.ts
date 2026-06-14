@@ -227,6 +227,14 @@ export const useCreateEmployee = () => {
   })
 }
 
+export const useDeleteEmployee = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => employeesApi.delete(id).then(r => r.data),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['employees'] }),
+  })
+}
+
 export { useIsMobile } from './useIsMobile'
 
 export const useDeleteService = () => {

@@ -79,6 +79,7 @@ export const employeesApi = {
   getById:         (id: string) => apiClient.get<Employee>(`/employees/${id}`),
   create:          (data: CreateEmployeeData) => apiClient.post<Employee>('/employees', data),
   update:          (id: string, data: Partial<Employee>) => apiClient.put<Employee>(`/employees/${id}`, data),
+  delete:          (id: string) => apiClient.delete(`/employees/${id}`),
   getWorkingHours: (id: string) => apiClient.get(`/employees/${id}/working-hours`),
 }
 

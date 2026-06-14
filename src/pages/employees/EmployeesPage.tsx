@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Users, Plus, Percent, MoreVertical } from 'lucide-react'
+import { Users, Plus, Percent, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEmployees, useServices } from '@/hooks'
+import { useEmployees, useServices, useDeleteEmployee } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, Badge, Avatar, Button, EmptyState, Spinner } from '@/components/ui'
@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils'
 import { CreateEmployeeModal } from './components/CreateEmployeeModal'
 import type { Employee } from '@/models'
 import type { Plan } from '@/lib/plans'
+import { can } from '@/permissions/abilities'
+import type { Ability, Role } from '@/permissions/abilities'
 
 export function EmployeesPage() {
   const { t } = useTranslation()
@@ -29,6 +31,9 @@ export function EmployeesPage() {
   const atLimit = !canAddBarber(plan, employees.length)
   const planConfig = PLANS[plan]
 
+  // Verificar se o user logado pode despedir employees
+  const canManage = can((user?.role ?? 'employee') as Role, 'employees:manage' as Ability)
+
   return (
     <div>
       <PageHeader
@@ -37,7 +42,7 @@ export function EmployeesPage() {
         actions={
           <Button
             onClick={() => {
-              if (atLimit) return   // PlanGate handles the UX
+              if (atLimit) return
               setSelectedEmployee(null)
               setModalOpen(true)
             }}
@@ -49,7 +54,6 @@ export function EmployeesPage() {
         }
       />
 
-      {/* Plan limit warning */}
       {atLimit && (
         <div className="mb-4">
           <UpsellBanner
@@ -62,7 +66,6 @@ export function EmployeesPage() {
         </div>
       )}
 
-      {/* Employee grid */}
       {isLoading ? (
         <Spinner />
       ) : employees.length === 0 ? (
@@ -89,11 +92,11 @@ export function EmployeesPage() {
               key={emp.id}
               employee={emp}
               isSelf={emp.userId === user?.id}
+              canManage={canManage}
               onClick={() => { setSelectedEmployee(emp); setModalOpen(true) }}
             />
           ))}
 
-          {/* Add slot — shown but locked if at limit */}
           {!atLimit && (
             <button
               onClick={() => { setSelectedEmployee(null); setModalOpen(true) }}
@@ -122,7 +125,32 @@ export function EmployeesPage() {
 }
 
 // ─── Employee Card ─────────────────────────────────────────────────────────────
-function EmployeeCard({ employee, isSelf, onClick, serviceMap }: { employee: Employee; isSelf: boolean; onClick: () => void; serviceMap: Record<string, { name: string; color: string }> }) {
+function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
+  employee: Employee; isSelf: boolean; onClick: () => void; canManage: boolean
+  serviceMap: Record<string, { name: string; color: string }>
+}) {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const deleteEmployee = useDeleteEmployee()
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowConfirm(true)
+  }
+
+  const confirmDismiss = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await deleteEmployee.mutateAsync(employee.id)
+    } finally {
+      setShowConfirm(false)
+    }
+  }
+
+  const cancelDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowConfirm(false)
+  }
+
   return (
     <Card
       className="cursor-pointer hover:border-primary/30 hover:shadow-md transition-all group"
@@ -149,10 +177,45 @@ function EmployeeCard({ employee, isSelf, onClick, serviceMap }: { employee: Emp
               </Badge>
             </div>
           </div>
-          <button className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted transition-all">
-            <MoreVertical className="w-4 h-4" />
-          </button>
+          {canManage && !isSelf && !showConfirm && (
+            <button
+              onClick={handleDismiss}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10 transition-all"
+              title="Despedir barbeiro"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
+
+        {/* Confirmação de despedir */}
+        {showConfirm && (
+          <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20" onClick={e => e.stopPropagation()}>
+            <p className="text-xs font-body text-red-400 mb-2">
+              Tens a certeza que queres despedir <strong>{employee.name}</strong>?
+              O barbeiro vai perder acesso ao sistema.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={confirmDismiss}
+                loading={deleteEmployee.isPending}
+                className="h-7 text-xs"
+              >
+                Sim, despedir
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={cancelDismiss}
+                className="h-7 text-xs"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Services */}
         {(employee.serviceIds ?? []).length > 0 && (
@@ -169,7 +232,6 @@ function EmployeeCard({ employee, isSelf, onClick, serviceMap }: { employee: Emp
           </div>
         )}
 
-        {/* Stats */}
         <div className="flex items-center gap-4 text-xs text-muted-foreground font-body">
           <span className="flex items-center gap-1">
             <Percent className="w-3 h-3" />

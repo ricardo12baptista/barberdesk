@@ -16,8 +16,9 @@ import { format } from 'date-fns'
 
 // ─── 3 visible statuses ───────────────────────────────────────────────────────
 function toVisibleStatus(status: string) {
-  if (status === 'completed')                          return 'completed' as const
-  if (status === 'no_show' || status === 'cancelled')  return 'no_show'  as const
+  const s = status?.toLowerCase?.() ?? ''
+  if (s === 'completed')                       return 'completed' as const
+  if (s === 'no_show' || s === 'cancelled') return 'no_show'  as const
   return 'confirmed' as const
 }
 const DASH_STATUS: Record<'confirmed' | 'completed' | 'no_show', { label: string; style: string }> = {
@@ -109,7 +110,6 @@ export function DashboardPage() {
                 title={t('dashboard.todayRevenue')}
                 value={formatCurrency(summary?.revenue ?? 0)}
                 icon={TrendingUp}
-                trend={{ value: 12, label: 'vs. ontem' }}
               />
             )}
             <MetricCard
@@ -123,7 +123,6 @@ export function DashboardPage() {
                 title={t('dashboard.occupancyRate')}
                 value={formatPercent(summary?.occupancyRate ?? 0)}
                 icon={Users}
-                trend={{ value: 5, label: 'vs. semana passada' }}
               />
             )}
             <MetricCard
@@ -131,7 +130,6 @@ export function DashboardPage() {
               value={formatPercent(summary?.noShowRate ?? 0)}
               icon={AlertTriangle}
               iconColor="text-amber-500"
-              trend={{ value: -2, label: 'melhoria' }}
             />
           </div>
 

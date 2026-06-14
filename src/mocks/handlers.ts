@@ -104,6 +104,14 @@ export const handlers = [
       : HttpResponse.json({ message: 'Not found' }, { status: 404 })
   }),
 
+  http.delete(`${API}/employees/:id`, async ({ params }) => {
+    await delay(DELAY)
+    const emp = mockEmployees.find(e => e.id === params.id)
+    if (!emp) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    emp.isActive = false
+    return HttpResponse.json({ message: 'Funcionário desativado com sucesso' })
+  }),
+
   // ─── Clients ────────────────────────────────────────────────────────────────
   http.get(`${API}/clients`, async ({ request }) => {
     await delay(DELAY)
