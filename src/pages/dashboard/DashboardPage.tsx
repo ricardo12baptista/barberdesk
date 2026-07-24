@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts'
-import { TrendingUp, CalendarCheck2, Users, AlertTriangle, Scissors, Star, ChevronsUpDown } from 'lucide-react'
-import { useAnalyticsSummary, useRevenueTrend, useAppointments, useClientsFlat, useServices, useEmployees, useLocations } from '@/hooks'
+import { TrendingUp, CalendarCheck2, Users, AlertTriangle, Scissors, Star } from 'lucide-react'
+import { useAnalyticsSummary, useRevenueTrend, useAppointments, useClientsFlat, useServices, useEmployees } from '@/hooks'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import {
@@ -31,11 +31,9 @@ export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { activeLocation } = useUIStore()
-  const { data: locations = [] } = useLocations()
 
-  // ── In-page location filter (super_admin only) ────────────────────────────────
-  const [dashLocationId, setDashLocationId] = useState<string | undefined>(undefined)
-  const effectiveLocationId = dashLocationId ?? activeLocation?.id ?? (user?.locationId ?? undefined)
+  // ── Location follows sidebar selection ───────────────────────────────────────
+  const effectiveLocationId = activeLocation?.id ?? user?.locationId ?? undefined
 
   // ── Role flags ──────────────────────────────────────────────────────────────
   const isSuperAdmin = user?.role === 'super_admin'
@@ -67,40 +65,9 @@ export function DashboardPage() {
   })
   const safeTodayApts = Array.isArray(todayApts) ? todayApts : []
 
-  // ── Subtitle with location filter (super_admin only) ──────────────────────────
-  const subtitleEl = (
-    <div className="flex items-center gap-2">
-      {isSuperAdmin && locations.length > 1 ? (
-        <div className="relative inline-flex">
-          <select
-            value={dashLocationId ?? 'all'}
-            onChange={e => setDashLocationId(e.target.value === 'all' ? undefined : e.target.value)}
-            className={cn(
-              'h-6 rounded text-xs font-body appearance-none cursor-pointer pl-1 pr-5',
-              'bg-transparent border-0 text-muted-foreground hover:text-foreground',
-              'focus:outline-none focus:ring-0',
-            )}
-          >
-            <option value="all">Visão Global — Todas as Lojas</option>
-            {locations.map(l => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-          <ChevronsUpDown className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-        </div>
-      ) : effectiveLocationId ? (
-        <span className="text-muted-foreground">{locations.find(l => l.id === effectiveLocationId)?.name ?? ''}</span>
-      ) : isSuperAdmin ? (
-        <span className="text-muted-foreground">Visão Global — Todas as Lojas</span>
-      ) : isPartner ? (
-        <span className="text-muted-foreground">Os meus serviços</span>
-      ) : null}
-    </div>
-  )
-
   return (
     <div>
-      <PageHeader title={t('dashboard.title')} subtitle={subtitleEl} />
+      <PageHeader title={t('dashboard.title')} />
 
       {summaryLoading ? <Spinner /> : (
         <>

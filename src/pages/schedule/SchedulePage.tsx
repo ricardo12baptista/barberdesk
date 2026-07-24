@@ -4,7 +4,7 @@ import { format, parseISO, eachDayOfInterval } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
-import { useLocations, useEmployees } from '@/hooks'
+import { useEmployees } from '@/hooks'
 import { locationScheduleApi, type EmployeeAbsence } from '@/api'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Spinner, Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -412,16 +412,8 @@ function ClosureList({ items, empMap, onRemove }: {
 export function SchedulePage() {
   const { user }            = useAuthStore()
   const { activeLocation }  = useUIStore()
-  const { data: locations = [] } = useLocations()
 
-  const isSuperAdmin = user?.role === 'super_admin'
-
-  const [selectedLocId, setSelectedLocId] = useState('')
-  useEffect(() => {
-    setSelectedLocId(activeLocation?.id ?? user?.locationId ?? locations[0]?.id ?? '')
-  }, [activeLocation, user, locations])
-
-  const selectedLoc = locations.find(l => l.id === selectedLocId)
+  const selectedLocId = activeLocation?.id ?? user?.locationId ?? ''
 
   const sched    = useSchedule(selectedLocId)
   const sets     = useSettings(selectedLocId)
@@ -440,7 +432,6 @@ export function SchedulePage() {
     <div>
       <PageHeader
         title="Agenda da Loja"
-        subtitle={selectedLoc?.name}
         actions={hasUnsaved ? (
           <div className="flex gap-2">
             {sched.dirty && (
@@ -456,17 +447,6 @@ export function SchedulePage() {
           </div>
         ) : undefined}
       />
-
-      {/* Location selector — super_admin only */}
-      {isSuperAdmin && locations.length > 1 && (
-        <div className="mb-6">
-          <select value={selectedLocId} onChange={e => setSelectedLocId(e.target.value)}
-            className="h-9 rounded-xl border border-border bg-card px-3 text-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-        </div>
-      )}
 
       {errors.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 font-body">

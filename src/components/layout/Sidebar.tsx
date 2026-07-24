@@ -158,10 +158,10 @@ export function Sidebar() {
           </p>
           <div className="relative">
             <select
-              value={activeLocation?.id ?? ''}
+              value={activeLocation?.id ?? locations[0]?.id ?? ''}
               onChange={e => {
-                const v = e.target.value
-                if (v) setActiveLocation(locations.find(l => l.id === v) ?? null)
+                const loc = locations.find(l => l.id === e.target.value) ?? null
+                if (loc) setActiveLocation(loc)
               }}
               className={cn(
                 'w-full h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
@@ -169,7 +169,6 @@ export function Sidebar() {
                 'text-sidebar-foreground focus:outline-none focus:ring-1 focus:ring-primary',
               )}
             >
-              <option value="" disabled>Selecionar loja...</option>
               {locations.map(l => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
