@@ -349,13 +349,13 @@ function isPast(hour: number, minute = 0): boolean {
   return hour < currentHour || (hour === currentHour && minute <= now.getMinutes())
 }
 
-// Gera status realistas baseados na hora
+// Gera status determinísticos baseados na hora (sem random — fiável para testes)
 function pastStatus(): 'completed' | 'no_show' {
-  return Math.random() < 0.85 ? 'completed' : 'no_show'
+  return 'completed'
 }
 
 function futureStatus(): 'confirmed' | 'pending' {
-  return Math.random() < 0.7 ? 'confirmed' : 'pending'
+  return 'confirmed'
 }
 
 export const mockAppointments: Appointment[] = [
@@ -378,7 +378,7 @@ export const mockAppointments: Appointment[] = [
   { id: 'apt-1c-1', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(9,  30),  price: 15 },
   { id: 'apt-1c-2', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-5', serviceId: 'svc-1-4', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0),  endsAt: makeApt(11,  0),  price: 25 },
   { id: 'apt-1c-3', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-3', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 45), price: 18 },
-  { id: 'apt-1c-4', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-6', serviceId: 'svc-1-3', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 30), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), price: 12 },
+  { id: 'apt-1c-4', locationId: 'loc-1c', employeeId: 'e1-5', clientId: 'cli-1-6', serviceId: 'svc-1-3', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 30), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 30 + 30), price: 12 },
   { id: 'apt-1c-5', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-1', serviceId: 'svc-1-2', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30),  endsAt: makeApt(10, 15),  price: 18 },
   { id: 'apt-1c-6', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-4', serviceId: 'svc-1-1', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 30),  price: 15 },
   { id: 'apt-1c-7', locationId: 'loc-1c', employeeId: 'e1-6', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: isPast(13, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(13, 0),  endsAt: makeApt(13, 30),  price: 12 },
@@ -386,18 +386,18 @@ export const mockAppointments: Appointment[] = [
   { id: 'apt-1d-1', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-3', serviceId: 'svc-1-4', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(10,  0),  price: 25 },
   { id: 'apt-1d-2', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-5', serviceId: 'svc-1-1', status: isPast(10, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 30), endsAt: makeApt(11,  0),  price: 15 },
   { id: 'apt-1d-3', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-1', serviceId: 'svc-1-3', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 30), price: 12 },
-  { id: 'apt-1d-4', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-6', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 15 ? 15 : 14, 30), endsAt: makeApt(currentHour >= 15 ? 15 : 14, 15), price: 18 },
+  { id: 'apt-1d-4', locationId: 'loc-1d', employeeId: 'e1-7', clientId: 'cli-1-6', serviceId: 'svc-1-2', status: futureStatus(), startsAt: makeApt(currentHour >= 15 ? 15 : 14, 30), endsAt: makeApt(currentHour >= 15 ? 15 : 15, 15), price: 18 },
   { id: 'apt-1d-5', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-4', serviceId: 'svc-1-6', status: isPast(9, 30) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 30),  endsAt: makeApt(9,  45),  price:  8 },
   { id: 'apt-1d-6', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-2', serviceId: 'svc-1-1', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 30),  price: 15 },
   { id: 'apt-1d-7', locationId: 'loc-1d', employeeId: 'e1-8', clientId: 'cli-1-5', serviceId: 'svc-1-3', status: isPast(13, 0) ? 'no_show' : 'confirmed',     startsAt: makeApt(13, 0),  endsAt: makeApt(13, 30),  price: 12 },
   // ── Cenário 1 — Braga Centro (e1-9: Diogo, e1-10: Luís) ──
   { id: 'apt-1e-1', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-1', serviceId: 'svc-1-2', status: isPast(9, 0)  ? pastStatus() : 'confirmed',   startsAt: makeApt(9,  0),  endsAt: makeApt(9,  45),  price: 18 },
   { id: 'apt-1e-2', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-3', serviceId: 'svc-1-1', status: isPast(10, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(10, 0),  endsAt: makeApt(10, 30),  price: 15 },
-  { id: 'apt-1e-3', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-5', serviceId: 'svc-1-4', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), price: 25 },
+  { id: 'apt-1e-3', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-5', serviceId: 'svc-1-4', status: futureStatus(), startsAt: makeApt(currentHour >= 14 ? 14 : 12, 0), endsAt: makeApt(currentHour >= 14 ? 14 : 13, 0), price: 25 },
   { id: 'apt-1e-4', locationId: 'loc-1e', employeeId: 'e1-9',  clientId: 'cli-1-6', serviceId: 'svc-1-5', status: futureStatus(), startsAt: makeApt(currentHour >= 16 ? 16 : 14, 0), endsAt: makeApt(currentHour >= 16 ? 16 : 14, 45), price: 20 },
   { id: 'apt-1e-5', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-2', serviceId: 'svc-1-3', status: isPast(9, 15) ? pastStatus() : 'confirmed',   startsAt: makeApt(9, 15),  endsAt: makeApt(9,  45),  price: 12 },
   { id: 'apt-1e-6', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-4', serviceId: 'svc-1-2', status: isPast(11, 0) ? pastStatus() : 'confirmed',   startsAt: makeApt(11, 0),  endsAt: makeApt(11, 45),  price: 18 },
-  { id: 'apt-1e-7', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: futureStatus(), startsAt: makeApt(currentHour >= 13 ? 13 : 11, 30), endsAt: makeApt(currentHour >= 13 ? 13 : 11, 0), price: 15 },
+  { id: 'apt-1e-7', locationId: 'loc-1e', employeeId: 'e1-10', clientId: 'cli-1-1', serviceId: 'svc-1-1', status: futureStatus(), startsAt: makeApt(currentHour >= 13 ? 13 : 11, 30), endsAt: makeApt(currentHour >= 13 ? 13 : 12, 0), price: 15 },
   // ── Cenário 2 — Porto Boavista (e2-owner: João, e2-1: Fábio) ──
   { id: 'apt-2-1', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-1', serviceId: 'svc-2-1', status: isPast(9, 0)  ? pastStatus() : 'confirmed', startsAt: makeApt(9,  0), endsAt: makeApt(9,  30), price: 16 },
   { id: 'apt-2-2', locationId: 'loc-2a', employeeId: 'e2-owner', clientId: 'cli-2-2', serviceId: 'svc-2-4', status: futureStatus(), startsAt: makeApt(currentHour >= 10 ? 10 : 8, 0), endsAt: makeApt(currentHour >= 10 ? 10 : 8, 55), price: 26 },
@@ -551,12 +551,16 @@ export const mockEmployeeAbsences: EmployeeAbsence[] = []
 // ─────────────────────────────────────────────────────────────────────────────
 // RECEITA (trend para dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
+// Valores determinísticos para testes fiáveis (sem random)
+const REVENUE_VALUES = [320, 410, 280, 530, 390, 470, 510]
+const APPT_VALUES    = [12, 18, 9, 22, 15, 20, 24]
+
 export const mockRevenueTrend = Array.from({ length: 7 }, (_, i) => {
   const dt = new Date()
   dt.setDate(dt.getDate() - (6 - i))
   return {
     date:         dt.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric' }),
-    revenue:      Math.floor(Math.random() * 400) + 150,
-    appointments: Math.floor(Math.random() * 20)  + 8,
+    revenue:      REVENUE_VALUES[i],
+    appointments: APPT_VALUES[i],
   }
 })

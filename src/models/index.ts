@@ -49,12 +49,16 @@ export interface Service {
   category: 'hair' | 'beard' | 'combo' | 'treatment' | 'other'
   isActive: boolean
   color: string
+  // New many-to-many fields
+  locationActive?: boolean       // whether service is active for the requested location
+  locationPrice?: number | null  // per-location price override
+  assignedLocations?: ServiceLocationAssignment[]
 }
 
-export interface LocationServiceOverride {
+export interface ServiceLocationAssignment {
   locationId: string
-  serviceId: string
-  price: number   // overrides basePrice for this location
+  isActive: boolean
+  price: number | null
 }
 
 // ─── Employee ─────────────────────────────────────────────────────────────────

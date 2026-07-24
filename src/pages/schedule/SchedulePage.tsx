@@ -229,7 +229,7 @@ type AddModalProps =
 function AddModal({ mode, employees, onAdd, onClose }: AddModalProps) {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [form, setForm] = useState({
-    startDate: today, endDate: today, reason: '', type: 'vacation', employeeId: employees[0]?.id ?? '',
+    startDate: today, endDate: today, type: 'vacation', employeeId: employees[0]?.id ?? '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -244,7 +244,7 @@ function AddModal({ mode, employees, onAdd, onClose }: AddModalProps) {
       await onAdd({
         startDate: form.startDate,
         endDate: form.endDate,
-        reason: form.reason,
+        reason: '',
         type: form.type as LocationClosure['type'],
       })
     } else {
@@ -252,7 +252,7 @@ function AddModal({ mode, employees, onAdd, onClose }: AddModalProps) {
         employeeId: form.employeeId,
         startDate: form.startDate,
         endDate: form.endDate,
-        reason: form.reason,
+        reason: '',
       })
     }
     onClose()
@@ -321,15 +321,6 @@ function AddModal({ mode, employees, onAdd, onClose }: AddModalProps) {
             </p>
           )}
 
-          {/* Reason */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium font-body text-foreground">Motivo *</label>
-            <input type="text" required value={form.reason}
-              placeholder={mode === 'closure' ? 'Ex: Férias de Agosto, Feriado...' : 'Ex: Férias, Consulta médica...'}
-              onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              className="w-full h-9 rounded-lg border border-input bg-muted/30 px-3 text-sm font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={onClose} className="flex-1">Cancelar</Button>
@@ -386,7 +377,6 @@ function ClosureList({ items, empMap, onRemove }: {
             )}
             {isActive && <span className="text-[10px] text-amber-400 font-body">Em curso</span>}
           </div>
-          <p className="text-sm font-body font-medium text-foreground">{item.reason}</p>
           <p className="text-xs text-muted-foreground font-body mt-0.5">
             {sameDay
               ? format(start, "d 'de' MMMM 'de' yyyy", { locale: pt })

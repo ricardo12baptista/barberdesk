@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { CheckCircle2, Calendar, Clock, User, MapPin, Scissors, Loader2, Home } from 'lucide-react'
+import { CheckCircle2, Calendar, Clock, User, MapPin, Scissors, Loader2 } from 'lucide-react'
 import { format, parseISO, addMinutes } from 'date-fns'
 import { pt } from 'date-fns/locale'
 
@@ -114,19 +114,8 @@ export function BookingConfirmedPage() {
             Referência: <span className="font-mono text-foreground">{apt.id.toUpperCase()}</span>
           </p>
 
-          {/* CTA */}
-          <div className="flex flex-col gap-3">
-            <Link to="/book"
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-display font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Calendar className="w-4 h-4" /> Nova marcação
-            </Link>
-            <Link to="/"
-              className="w-full h-12 rounded-xl border border-border text-foreground font-body font-medium flex items-center justify-center gap-2 hover:bg-muted transition-colors"
-            >
-              <Home className="w-4 h-4" /> Página inicial
-            </Link>
-          </div>
+          {/* CTA — sem botões de navegação, apenas a referência */}
+          <div className="h-4" />
         </div>
       </div>
     </div>

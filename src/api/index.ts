@@ -103,6 +103,8 @@ export const servicesApi = {
   create:  (data: Partial<Service>) => apiClient.post<Service>('/services', data),
   update:  (id: string, data: Partial<Service>) => apiClient.put<Service>(`/services/${id}`, data),
   delete:  (id: string) => apiClient.delete(`/services/${id}`),
+  toggleLocation: (id: string, locationId: string, isActive: boolean) =>
+    apiClient.patch(`/services/${id}/toggle-location`, { locationId, isActive }),
 }
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

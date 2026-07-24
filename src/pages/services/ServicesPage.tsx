@@ -1,13 +1,16 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Plus, Scissors, Clock, Euro, Edit2, Trash2, CheckCircle, XCircle, Tag } from 'lucide-react'
-import { useServices, useCreateService, useUpdateService, useDeleteService } from '@/hooks'
+import { Plus, Scissors, Clock, Euro, Edit2, Trash2, CheckCircle, XCircle, Tag, Store, Building2 } from 'lucide-react'
+import { useServices, useCreateService, useUpdateService, useDeleteService, useLocations } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
+import { useUIStore } from '@/stores/ui.store'
+import { servicesApi } from '@/api'
 import { PageHeader, Card, CardContent, Badge, Button, Spinner, EmptyState, Input } from '@/components/ui'
 import { formatCurrency, getDurationLabel, cn } from '@/lib/utils'
 import type { Service } from '@/models'
 
-const CATEGORY_COLORS: Record<Service['category'], string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   hair:      'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
   beard:     'bg-amber-500/15  text-amber-400  border-amber-500/30',
   combo:     'bg-green-500/15  text-green-400  border-green-500/30',
@@ -15,13 +18,15 @@ const CATEGORY_COLORS: Record<Service['category'], string> = {
   other:     'bg-slate-500/15  text-slate-400  border-slate-500/30',
 }
 
-function ServiceModal({ service, orgId, onClose }: { service: Service | null; orgId: string; onClose: () => void }) {
+function ServiceModal({ service, orgId, onClose }: { service: (Service & { locationIds?: string[] }) | null; orgId: string; onClose: () => void }) {
   const { t } = useTranslation()
+  const { activeLocation } = useUIStore()
   const isEdit    = !!service
   const createSvc = useCreateService()
   const updateSvc = useUpdateService()
+  const { data: locations = [] } = useLocations()
 
-  const CATEGORIES: { key: Service['category']; label: string }[] = [
+  const CATEGORIES: { key: string; label: string }[] = [
     { key: 'hair',      label: t('services.category.hair')      },
     { key: 'beard',     label: t('services.category.beard')     },
     { key: 'combo',     label: t('services.category.combo')     },
@@ -29,25 +34,38 @@ function ServiceModal({ service, orgId, onClose }: { service: Service | null; or
     { key: 'other',     label: t('services.category.other')     },
   ]
 
+  // Existing assigned location IDs for this service
+  const existingLocIds = service?.assignedLocations?.map(a => a.locationId) ?? []
+
   const [form, setForm] = useState({
     name:            service?.name            ?? '',
-    category:        service?.category        ?? ('hair' as Service['category']),
+    category:        service?.category        ?? ('hair' as string),
     durationMinutes: service?.durationMinutes ?? 30,
     basePrice:       service?.basePrice       ?? 15,
     description:     service?.description     ?? '',
-    isActive:        service?.isActive        ?? true,
     color:           service?.color           ?? '#6366f1',
   })
+  const [selectedLocIds, setSelectedLocIds] = useState<string[]>(
+    service?.locationIds ?? existingLocIds ?? [activeLocation?.id ?? ''].filter(Boolean)
+  )
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }))
 
+  const toggleLoc = (locId: string) => {
+    setSelectedLocIds(prev =>
+      prev.includes(locId) ? prev.filter(id => id !== locId) : [...prev, locId]
+    )
+  }
+
   const handleSave = async () => {
-    if (!form.name.trim()) { setError(t('services.name') + ' ' + t('common.save').toLowerCase() + '.'); return }
+    if (!form.name.trim()) { setError('Nome é obrigatório.'); return }
+    if (selectedLocIds.length === 0) { setError('Selecione pelo menos uma loja.'); return }
     setSaving(true)
     try {
-      if (isEdit) await updateSvc.mutateAsync({ id: service.id, data: form })
-      else        await createSvc.mutateAsync({ ...form, organizationId: orgId })
+      const payload = { ...form, category: form.category as Service['category'], locationIds: selectedLocIds }
+      if (isEdit) await updateSvc.mutateAsync({ id: service!.id, data: payload })
+      else        await createSvc.mutateAsync(payload)
       onClose()
     } catch { setError('Erro ao guardar. Tenta novamente.') }
     finally { setSaving(false) }
@@ -56,10 +74,10 @@ function ServiceModal({ service, orgId, onClose }: { service: Service | null; or
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
           <h2 className="font-display font-bold text-foreground text-base">
-            {isEdit ? t('services.editTitle') : t('services.newTitle')}
+            {isEdit ? 'Editar Serviço' : 'Novo Serviço'}
           </h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
             <XCircle className="w-4 h-4" />
@@ -72,6 +90,38 @@ function ServiceModal({ service, orgId, onClose }: { service: Service | null; or
             <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">{t('services.name')}</label>
             <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="ex: Corte Clássico" />
           </div>
+
+          {/* Loja selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">
+              Lojas <span className="text-muted-foreground/50">(selecione uma ou mais)</span>
+            </label>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {locations.map(loc => {
+                const isSelected = selectedLocIds.includes(loc.id)
+                return (
+                  <button key={loc.id} type="button" onClick={() => toggleLoc(loc.id)}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-body transition-all text-left',
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/40'
+                    )}
+                  >
+                    <div className={cn(
+                      'w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                      isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/40'
+                    )}>
+                      {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                    </div>
+                    <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{loc.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">{t('services.category')}</label>
             <div className="flex flex-wrap gap-2">
@@ -112,17 +162,6 @@ function ServiceModal({ service, orgId, onClose }: { service: Service | null; or
               <span className="text-xs font-mono text-muted-foreground">{form.color}</span>
             </div>
           </div>
-          {isEdit && (
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm font-body text-foreground">{t('services.active')}</span>
-              <button onClick={() => set('isActive', !form.isActive)}
-                className={cn('w-10 h-6 rounded-full transition-colors relative overflow-hidden', form.isActive ? 'bg-primary' : 'bg-muted')}
-              >
-                <span className={cn('absolute top-[4px] w-4 h-4 rounded-full bg-white shadow transition-all duration-200',
-                  form.isActive ? 'left-[22px]' : 'left-[4px]')} />
-              </button>
-            </div>
-          )}
         </div>
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
           <Button variant="outline" size="sm" onClick={onClose}>{t('common.cancel')}</Button>
@@ -138,15 +177,32 @@ function ServiceModal({ service, orgId, onClose }: { service: Service | null; or
 export function ServicesPage() {
   const { t } = useTranslation()
   const { organization, user } = useAuthStore()
+  const { activeLocation } = useUIStore()
   const { data: services = [], isLoading } = useServices()
-  const updateSvc = useUpdateService()
+  const { data: locations = [] } = useLocations()
   const deleteSvc = useDeleteService()
+  const qc = useQueryClient()
 
   const [modalService,  setModalService]  = useState<Service | 'new' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Service | null>(null)
   const canManage = user?.role === 'super_admin' || user?.role === 'manager'
 
-  const CATEGORIES: { key: Service['category']; label: string }[] = [
+  // Toggle per location
+  const handleToggleLocation = async (svcId: string, locationId: string, currentlyActive: boolean) => {
+    try {
+      await servicesApi.toggleLocation(svcId, locationId, !currentlyActive)
+      qc.invalidateQueries({ queryKey: ['services'] })
+    } catch (err) {
+      console.error('Error toggling service location:', err)
+    }
+  }
+
+  // Location map for display
+  const locMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
+
+  const currentLocId = activeLocation?.id ?? user?.locationId
+
+  const CATEGORIES: { key: string; label: string }[] = [
     { key: 'hair',      label: t('services.category.hair')      },
     { key: 'beard',     label: t('services.category.beard')     },
     { key: 'combo',     label: t('services.category.combo')     },
@@ -160,7 +216,6 @@ export function ServicesPage() {
     services: services.filter(s => s.category === c.key),
   })).filter(g => g.services.length > 0)
 
-  const handleToggle = (svc: Service) => updateSvc.mutate({ id: svc.id, data: { isActive: !svc.isActive } })
   const handleDelete = async () => {
     if (!confirmDelete) return
     await deleteSvc.mutateAsync(confirmDelete.id)
@@ -195,54 +250,65 @@ export function ServicesPage() {
                 <span className="text-xs text-muted-foreground font-body">{catServices.length}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {catServices.map(svc => (
-                  <Card key={svc.id} className={cn('transition-all', !svc.isActive && 'opacity-55')}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-3 h-3 rounded-full flex-shrink-0 border-2"
-                            style={{ backgroundColor: svc.color + '33', borderColor: svc.color }} />
-                          <p className="font-display font-semibold text-sm text-foreground truncate">{svc.name}</p>
+                {catServices.map(svc => {
+                  // Find assignment status for current location
+                  const assignment = svc.assignedLocations?.find(a => a.locationId === currentLocId)
+                  const isActiveInLoc = assignment?.isActive ?? svc.isActive
+
+                  return (
+                    <Card key={svc.id} className={cn('transition-all', !isActiveInLoc && 'opacity-55')}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-3 h-3 rounded-full flex-shrink-0 border-2"
+                              style={{ backgroundColor: svc.color + '33', borderColor: svc.color }} />
+                            <p className="font-display font-semibold text-sm text-foreground truncate">{svc.name}</p>
+                          </div>
+                          {currentLocId && (
+                            <Badge className={cn('flex-shrink-0 text-[10px] border-0',
+                              isActiveInLoc ? 'bg-green-500/10 text-green-500' : 'bg-slate-500/10 text-slate-400'
+                            )}>
+                              {isActiveInLoc ? t('common.active') : t('common.inactive')}
+                            </Badge>
+                          )}
                         </div>
-                        <Badge className={cn('flex-shrink-0 text-[10px] border-0',
-                          svc.isActive ? 'bg-green-500/10 text-green-500' : 'bg-slate-500/10 text-slate-400'
-                        )}>
-                          {svc.isActive ? t('common.active') : t('common.inactive')}
-                        </Badge>
-                      </div>
-                      {svc.description && (
-                        <p className="text-xs text-muted-foreground font-body mb-3 line-clamp-2">{svc.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="flex items-center gap-1.5 text-foreground font-display font-semibold">
-                          <Euro className="w-3.5 h-3.5 text-muted-foreground" />{formatCurrency(svc.basePrice)}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-muted-foreground font-body text-xs">
-                          <Clock className="w-3.5 h-3.5" />{getDurationLabel(svc.durationMinutes)}
-                        </span>
-                      </div>
-                      {canManage && (
-                        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
-                          <button onClick={() => setModalService(svc)}
-                            className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                            <Edit2 className="w-3 h-3" />{t('common.edit')}
-                          </button>
-                          <button onClick={() => handleToggle(svc)}
-                            className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                            {svc.isActive
-                              ? <><XCircle     className="w-3 h-3" />{t('services.deactivate')}</>
-                              : <><CheckCircle className="w-3 h-3" />{t('services.activate')}</>
-                            }
-                          </button>
-                          <button onClick={() => setConfirmDelete(svc)}
-                            className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                        {svc.description && (
+                          <p className="text-xs text-muted-foreground font-body mb-3 line-clamp-2">{svc.description}</p>
+                        )}
+
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1.5 text-foreground font-display font-semibold">
+                            <Euro className="w-3.5 h-3.5 text-muted-foreground" />{formatCurrency(assignment?.price ?? svc.basePrice)}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-muted-foreground font-body text-xs">
+                            <Clock className="w-3.5 h-3.5" />{getDurationLabel(svc.durationMinutes)}
+                          </span>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        {canManage && (
+                          <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
+                            <button onClick={() => setModalService(svc)}
+                              className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                              <Edit2 className="w-3 h-3" />{t('common.edit')}
+                            </button>
+                            {currentLocId && (
+                              <button onClick={() => handleToggleLocation(svc.id, currentLocId, isActiveInLoc)}
+                                className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                {isActiveInLoc
+                                  ? <><XCircle     className="w-3 h-3" />{t('services.deactivate')}</>
+                                  : <><CheckCircle className="w-3 h-3" />{t('services.activate')}</>
+                                }
+                              </button>
+                            )}
+                            <button onClick={() => setConfirmDelete(svc)}
+                              className="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-xs font-body text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -250,7 +316,11 @@ export function ServicesPage() {
       )}
 
       {modalService !== null && (
-        <ServiceModal service={modalService === 'new' ? null : modalService} orgId={organization?.id ?? ''} onClose={() => setModalService(null)} />
+        <ServiceModal
+          service={modalService === 'new' ? null : modalService}
+          orgId={organization?.id ?? ''}
+          onClose={() => setModalService(null)}
+        />
       )}
 
       {confirmDelete && (

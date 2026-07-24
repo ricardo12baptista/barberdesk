@@ -14,6 +14,7 @@ import {
   ReportsData,
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
+import { useUIStore } from '@/stores/ui.store'
 import type { Appointment, AppointmentStatus, Client, Location, Service } from '@/models'
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -82,13 +83,18 @@ export const useCreateClient = () => {
 }
 
 // ─── Services ─────────────────────────────────────────────────────────────────
-// Automatically scoped to org
-export const useServices = () => {
-  const { organization } = useAuthStore()
+// Scoped to org + location. Falls back to user's location if none provided.
+// When no locationId is available, returns all org services (backward compat).
+export const useServices = (locationId?: string) => {
+  const { organization, user } = useAuthStore()
+  const { activeLocation } = useUIStore()
   const orgId = organization?.id
+  // Use the provided locationId, or the activeLocation from UI, or the user's own locationId.
+  // Convert null/undefined to undefined so the API doesn't receive a null parameter.
+  const locId = locationId ?? activeLocation?.id ?? user?.locationId ?? undefined
   return useQuery({
-    queryKey: qk.services(orgId),
-    queryFn:  () => servicesApi.getAll().then(r => r.data),
+    queryKey: ['services', orgId, locId ?? 'all'],
+    queryFn:  () => servicesApi.getAll(locId).then(r => r.data),
     enabled:  !!orgId,
   })
 }

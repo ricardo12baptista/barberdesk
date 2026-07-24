@@ -100,11 +100,11 @@ function StepService({
   const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
-    fetch(`/api/public/services?orgId=${org.id}`)
+    fetch(`/api/public/services?orgId=${org.id}&locationId=${loc.id}`)
       .then(r => r.json())
       .then(data => { setServices(data); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [org.id])
+  }, [org.id, loc.id])
 
   const grouped = useMemo(() =>
     services.reduce((acc, s) => {
@@ -277,18 +277,16 @@ function StepDateTime({
       })
   }, [loc.id, svc.id])
 
-  // Pre-fetch open days for the next 60 days to populate calendar dots
+  // Pre-fetch available days (single efficient call instead of 60 individual requests)
   useEffect(() => {
     const empParam = selectedEmpId === 'any' ? '' : selectedEmpId
-    const promises = Array.from({ length: 60 }, (_, i) => {
-      const d = format(addDays(today, i + 1), 'yyyy-MM-dd')
-      return fetch(`/api/public/slots?locationId=${loc.id}&serviceId=${svc.id}&date=${d}&employeeId=${empParam}`)
-        .then(r => r.json())
-        .then((slots: TimeSlot[]) => slots.length > 0 ? d : null)
-    })
-    Promise.all(promises).then(results => {
-      setOpenDays(new Set(results.filter(Boolean) as string[]))
-    })
+    const params = new URLSearchParams({ locationId: loc.id, serviceId: svc.id })
+    if (empParam) params.set('employeeId', empParam)
+    fetch(`/api/public/available-days?${params}`)
+      .then(r => r.json())
+      .then((days: string[]) => {
+        setOpenDays(new Set(days))
+      })
   }, [selectedEmpId, loc.id, svc.id])
 
   // Load slots for selected date
