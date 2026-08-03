@@ -1,5 +1,5 @@
 // ─── Roles ────────────────────────────────────────────────────────────────────
-export type Role = 'super_admin' | 'manager' | 'partner' | 'employee'
+export type Role = 'super_admin' | 'owner' | 'manager' | 'partner' | 'employee'
 
 // ─── Organisation & Location ──────────────────────────────────────────────────
 export interface Organization {

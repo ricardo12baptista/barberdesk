@@ -25,6 +25,7 @@ interface NavItem {
 
 const ROLE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   super_admin: { label: 'Proprietário',    icon: Shield,   color: 'text-amber-400'  },
+  owner:       { label: 'Dono da Barbearia', icon: Crown,  color: 'text-purple-400' },
   manager:     { label: 'Gestor de Loja',  icon: Briefcase,color: 'text-blue-400'   },
   partner:     { label: 'Parceiro',        icon: Star,     color: 'text-violet-400' },
   employee:    { label: 'Barbeiro',        icon: User,     color: 'text-green-400'  },
@@ -43,6 +44,7 @@ export function Sidebar() {
   if (!user) return null
 
   const isSuperAdmin = user.role === 'super_admin'
+  const isOwner      = user.role === 'owner'
   const isManager    = user.role === 'manager'
   const isPartner    = user.role === 'partner'
   const isEmployee   = user.role === 'employee'
@@ -51,7 +53,9 @@ export function Sidebar() {
   const roleMeta     = ROLE_META[user.role] ?? ROLE_META.employee
 
   // isSoloOwner: guard against loading race — only true once locations have loaded
-  const isSoloOwner = isSuperAdmin && locations.length === 1 && totalBarbers <= 1
+  const isSoloOwner = (isSuperAdmin || isOwner) && locations.length === 1 && totalBarbers <= 1
+  // Owner e super_admin têm acesso a todas as lojas da organização
+  const isMultiLocation = (isSuperAdmin || isOwner) && locations.length > 1
 
   // ─── Nav items per role ─────────────────────────────────────────────────────
   const employeeItems: NavItem[] = [
@@ -150,8 +154,8 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* ── Location switcher — super_admin ─────────────────────────────────── */}
-      {isSuperAdmin && locations.length > 1 && !sidebarCollapsed && (
+      {/* ── Location switcher — super_admin / owner ─────────────────────────── */}
+      {isMultiLocation && !sidebarCollapsed && (
         <div className="px-3 py-2.5 border-b border-sidebar-border flex-shrink-0">
           <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest mb-1.5 font-display">
             {t('locations.title')}

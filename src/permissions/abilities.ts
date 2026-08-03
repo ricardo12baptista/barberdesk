@@ -10,7 +10,7 @@
 //  employee     Barbeiro        – own schedule & own clients only;
 //                                 no financial data, no global reports
 // ─────────────────────────────────────────────────────────────────────────────
-export type Role = 'super_admin' | 'manager' | 'partner' | 'employee'
+export type Role = 'super_admin' | 'owner' | 'manager' | 'partner' | 'employee'
 
 // ─── Ability Keys ─────────────────────────────────────────────────────────────
 export type Ability =
@@ -48,6 +48,20 @@ const PERMISSIONS: Record<Role, Ability[]> = {
   super_admin: [
     'dashboard:view_global', 'dashboard:view_location',
     'locations:manage', 'locations:view_all',
+    'employees:manage', 'employees:view_location', 'employees:view_own',
+    'clients:manage_all',
+    'services:manage_global', 'services:manage_location', 'services:view',
+    'calendar:view_all_employees', 'calendar:manage_appointments', 'calendar:block_schedule',
+    'appointments:view_all',
+    'financial:view_global', 'financial:view_location', 'financial:view_own',
+    'reports:view_global', 'reports:view_location', 'reports:view_own',
+    'settings:manage_global', 'settings:manage_location', 'settings:manage_own',
+  ],
+  // Dono da barbearia — acesso total à organização dele (todas as lojas),
+  // mas SEM acesso ao backoffice global (exclusivo do super_admin)
+  owner: [
+    'dashboard:view_global', 'dashboard:view_location',
+    'locations:view_all',
     'employees:manage', 'employees:view_location', 'employees:view_own',
     'clients:manage_all',
     'services:manage_global', 'services:manage_location', 'services:view',

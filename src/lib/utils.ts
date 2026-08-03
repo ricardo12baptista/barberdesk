@@ -47,6 +47,7 @@ export const tagColors: Record<ClientTag, string> = {
 
 export const roleColors: Record<Role, string> = {
   super_admin: 'bg-primary/15 text-primary',
+  owner: 'bg-purple-500/15 text-purple-400',
   manager: 'bg-violet-500/15 text-violet-400',
   employee: 'bg-sky-500/15 text-sky-400',
   partner: 'bg-emerald-500/15 text-emerald-400',

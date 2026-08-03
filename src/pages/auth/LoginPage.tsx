@@ -142,19 +142,36 @@ export function LoginPage() {
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
+  const [blocked,  setBlocked]  = useState(false)
   const [expanded, setExpanded] = useState<number | null>(0)  // first scenario open by default
+
+  const { logout } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const ok = await login(email, password)
-    if (ok) navigate('/dashboard')
+    if (!ok) return
+    // super_admin é exclusivo do backoffice — bloqueado na app dos barbeiros
+    if (useAuthStore.getState().user?.role === 'super_admin') {
+      logout()
+      setBlocked(true)
+      return
+    }
+    navigate('/dashboard')
   }
 
   const fillAndLogin = async (email: string, password: string) => {
     setEmail(email)
     setPassword(password)
     const ok = await login(email, password)
-    if (ok) navigate('/dashboard')
+    if (!ok) return
+    // super_admin é exclusivo do backoffice — bloqueado na app dos barbeiros
+    if (useAuthStore.getState().user?.role === 'super_admin') {
+      logout()
+      setBlocked(true)
+      return
+    }
+    navigate('/dashboard')
   }
 
   const PLAN_COLORS: Record<string, string> = {
@@ -180,6 +197,13 @@ export function LoginPage() {
         <div className="w-full">
           <h1 className="font-display font-bold text-foreground text-2xl mb-1">Bem-vindo</h1>
           <p className="text-sm text-muted-foreground font-body mb-8">Entra na tua conta</p>
+
+          {blocked && (
+            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive font-body">
+              Esta conta de proprietário (super_admin) é exclusiva do backoffice.
+              Usa a plataforma de gestão em <span className="font-semibold">/admin</span>.
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
