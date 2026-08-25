@@ -76,9 +76,9 @@ export const router = createBrowserRouter([
             children: [{ path: '/employees', element: <EmployeesPage /> }],
           },
 
-          // Super Admin only
+          // Owner + Super Admin — ver todas as lojas da organização
           {
-            element: <RequireRole ability="locations:manage" />,
+            element: <RequireRole ability="locations:view_all" />,
             children: [{ path: '/locations', element: <LocationsPage /> }],
           },
 

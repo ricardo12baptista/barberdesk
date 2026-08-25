@@ -1,4 +1,4 @@
-import { format, isSameMonth, isSameDay } from 'date-fns'
+import { format, isSameMonth, isSameDay, startOfDay } from 'date-fns'
 import { cn, statusColors } from '@/lib/utils'
 import type { Appointment, Client } from '@/models'
 
@@ -14,7 +14,7 @@ interface Props {
 const DAY_LABELS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
 
 export function MonthView({ monthDays, currentDate, appointments, clientMap = {}, onDayClick, onAptClick }: Props) {
-  const today = new Date()
+  const today = startOfDay(new Date())
 
   return (
     <div className="flex-1 overflow-auto">
@@ -32,6 +32,7 @@ export function MonthView({ monthDays, currentDate, appointments, clientMap = {}
         {monthDays.map((day, i) => {
           const isCurrentMonth = isSameMonth(day, currentDate)
           const isDayToday     = isSameDay(day, today)
+          const isPastDay      = day.getTime() < today.getTime()
           const dayApts        = appointments.filter(a => isSameDay(new Date(a.startsAt), day))
 
           return (
@@ -39,8 +40,10 @@ export function MonthView({ monthDays, currentDate, appointments, clientMap = {}
               key={i}
               onClick={() => onDayClick(day)}
               className={cn(
-                'min-h-[100px] border-b border-r border-border p-1.5 cursor-pointer',
-                'hover:bg-muted/30 transition-colors',
+                'min-h-[100px] border-b border-r border-border p-1.5',
+                isPastDay
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'cursor-pointer hover:bg-muted/30 transition-colors',
                 !isCurrentMonth && 'opacity-40',
                 isDayToday && 'bg-primary/5',
               )}
@@ -62,7 +65,7 @@ export function MonthView({ monthDays, currentDate, appointments, clientMap = {}
                 {dayApts.slice(0, 3).map(apt => (
                   <div
                     key={apt.id}
-                    onClick={e => { e.stopPropagation(); onAptClick(apt) }}
+                    onClick={e => { if (isPastDay) return; e.stopPropagation(); onAptClick(apt) }}
                     className={cn(
                       'text-[10px] font-body px-1.5 py-0.5 rounded truncate cursor-pointer',
                       'hover:opacity-80 transition-opacity border',

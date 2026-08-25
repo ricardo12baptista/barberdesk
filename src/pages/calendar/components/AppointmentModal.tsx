@@ -132,7 +132,13 @@ export function AppointmentModal({ open, onClose, appointment, prefill }: Props)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const startsAt = new Date(`${form.date}T${form.startTime}:00`).toISOString()
+    const startsAtDate = new Date(`${form.date}T${form.startTime}:00`)
+    // Não permitir criar/editar marcações no passado
+    if (startsAtDate.getTime() < new Date().getTime()) {
+      alert('Não é possível criar marcações em datas ou horários passados.')
+      return
+    }
+    const startsAt = startsAtDate.toISOString()
     const [h, m] = calcEndsAt().split(':').map(Number)
     const endsDate = new Date(`${form.date}T${form.startTime}:00`)
     endsDate.setHours(h, m)
@@ -336,6 +342,7 @@ export function AppointmentModal({ open, onClose, appointment, prefill }: Props)
                 <input
                   type="date"
                   required
+                  min={format(new Date(), 'yyyy-MM-dd')}
                   value={form.date}
                   onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                   className="w-full h-9 rounded-lg border border-input bg-muted/30 px-3 text-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-ring"

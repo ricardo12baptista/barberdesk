@@ -117,8 +117,13 @@ export function CalendarPage() {
   const handleDrop = async (aptId: string, startsAt: string, employeeId: string) => {
     const apt = appointments.find(a => a.id === aptId)
     if (!apt) return
-    const duration = new Date(apt.endsAt).getTime() - new Date(apt.startsAt).getTime()
     const newStart = new Date(startsAt)
+    // Não permitir mover marcações para o passado
+    if (newStart.getTime() < new Date().getTime()) {
+      alert('Não é possível mover marcações para datas ou horários passados.')
+      return
+    }
+    const duration = new Date(apt.endsAt).getTime() - new Date(apt.startsAt).getTime()
     await updateApt.mutateAsync({
       id: aptId,
       data: { startsAt: newStart.toISOString(), endsAt: new Date(newStart.getTime() + duration).toISOString(), employeeId },

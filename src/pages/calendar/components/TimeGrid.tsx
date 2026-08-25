@@ -120,6 +120,14 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
   const nowTop = ((now.getHours() - HOUR_START) + now.getMinutes() / 60) * SLOT_HEIGHT
   const showNow = nowTop >= 0 && nowTop <= totalHeight
 
+  // Bloquear cliques em slots de dias/horários já passados — não abre o modal
+  const handleSlotClick = (day: Date, empId: string, e: React.MouseEvent) => {
+    const time = yToTime(getRelativeY(e.clientY))
+    const slotDate = new Date(`${format(day, 'yyyy-MM-dd')}T${time}:00`)
+    if (slotDate.getTime() < now.getTime()) return
+    onSlotClick(`${format(day, 'yyyy-MM-dd')}T${time}:00`, empId)
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // UNIFIED — Vista Dia: 1 coluna, todos os barbeiros sobrepostos
   // ─────────────────────────────────────────────────────────────────────────
@@ -168,7 +176,7 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
             <div
               className={cn('flex-1 relative', isToday && 'bg-primary/[0.015]')}
               style={{ height: totalHeight }}
-              onClick={e => onSlotClick(`${format(date, 'yyyy-MM-dd')}T${yToTime(getRelativeY(e.clientY))}:00`, employees[0]?.id ?? '')}
+              onClick={e => handleSlotClick(date, employees[0]?.id ?? '', e)}
               onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
               onDrop={e => {
                 e.preventDefault()
@@ -270,7 +278,7 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
                   key={emp.id}
                   style={{ minWidth: COL_MIN, flex: '1 1 0', height: totalHeight }}
                   className={cn('border-r border-border last:border-r-0 relative', colIdx % 2 === 1 && 'bg-muted/[0.015]')}
-                  onClick={e => onSlotClick(`${format(date, 'yyyy-MM-dd')}T${yToTime(getRelativeY(e.clientY))}:00`, emp.id)}
+                  onClick={e => handleSlotClick(date, emp.id, e)}
                   onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
                   onDrop={e => {
                     e.preventDefault()
@@ -360,7 +368,7 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
                 key={colIdx}
                 className={cn('flex-1 border-r border-border last:border-r-0 relative', isToday && 'bg-primary/[0.02]')}
                 style={{ height: totalHeight }}
-                onClick={e => onSlotClick(`${format(day, 'yyyy-MM-dd')}T${yToTime(getRelativeY(e.clientY))}:00`, employees[0]?.id ?? '')}
+                onClick={e => handleSlotClick(day, employees[0]?.id ?? '', e)}
                 onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
                 onDrop={e => {
                   e.preventDefault()
