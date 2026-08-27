@@ -44,7 +44,7 @@ const today = new Date()
 // ═══════════════════════════════════════════════════════════════════════════════
 export const org1: Organization = {
   id: 'org-1', name: 'BarberKing', slug: 'barberking',
-  plan: 'enterprise', createdAt: '2021-03-01T10:00:00Z',
+  plan: 'enterprise', isActive: true, createdAt: '2021-03-01T10:00:00Z',
 }
 
 export const locs1: Location[] = [
@@ -107,7 +107,7 @@ export const emps1: Employee[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export const org2: Organization = {
   id: 'org-2', name: 'BarberStyle', slug: 'barberstyle',
-  plan: 'premium', createdAt: '2022-06-01T10:00:00Z',
+  plan: 'premium', isActive: true, createdAt: '2022-06-01T10:00:00Z',
 }
 
 export const locs2: Location[] = [
@@ -143,7 +143,7 @@ export const emps2: Employee[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export const org3: Organization = {
   id: 'org-3', name: 'CorteFino', slug: 'cortefino',
-  plan: 'pro', createdAt: '2023-01-15T10:00:00Z',
+  plan: 'pro', isActive: true, createdAt: '2023-01-15T10:00:00Z',
 }
 
 export const locs3: Location[] = [
@@ -171,7 +171,7 @@ export const emps3: Employee[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export const org4: Organization = {
   id: 'org-4', name: 'Barbearia do Zé', slug: 'barbearia-ze',
-  plan: 'basic', createdAt: '2024-03-01T10:00:00Z',
+  plan: 'basic', isActive: true, createdAt: '2024-03-01T10:00:00Z',
 }
 
 export const locs4: Location[] = [
@@ -194,7 +194,7 @@ export const emps4: Employee[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export const org5: Organization = {
   id: 'org-5', name: 'BarberDesk Demo', slug: 'barberdesk-demo',
-  plan: 'premium', createdAt: '2024-01-01T10:00:00Z',
+  plan: 'premium', isActive: true, createdAt: '2024-01-01T10:00:00Z',
 }
 
 export const locs5: Location[] = [

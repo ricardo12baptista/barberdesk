@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CalendarDays, CalendarCheck2, Users, UserCircle,
@@ -40,6 +40,12 @@ export function Sidebar() {
   const { data: locations = [] } = useLocations()
 
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (activeLocation && !locations.some(location => location.id === activeLocation.id)) {
+      setActiveLocation(null)
+    }
+  }, [activeLocation, locations, setActiveLocation])
 
   if (!user) return null
 
@@ -120,7 +126,7 @@ export function Sidebar() {
     ...mainItems,
   ]
 
-  const locationLabel = activeLocation?.name ?? (locations.find(l => l.id === user.locationId)?.name ?? '')
+  const locationLabel = activeLocation?.name ?? (locations.find(l => l.id === user.locationId)?.name ?? (locations.length === 1 ? locations[0].name : ''))
 
   const handleLogout = () => {
     setActiveLocation(null)

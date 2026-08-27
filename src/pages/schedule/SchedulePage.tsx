@@ -4,7 +4,7 @@ import { format, parseISO, eachDayOfInterval } from 'date-fns'
 import { pt } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
-import { useEmployees } from '@/hooks'
+import { useEmployees, useLocations } from '@/hooks'
 import { locationScheduleApi, type EmployeeAbsence } from '@/api'
 import { PageHeader, Card, CardContent, CardHeader, CardTitle, Spinner, Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -412,8 +412,9 @@ function ClosureList({ items, empMap, onRemove }: {
 export function SchedulePage() {
   const { user }            = useAuthStore()
   const { activeLocation }  = useUIStore()
+  const { data: locations = [], isLoading: locationsLoading } = useLocations()
 
-  const selectedLocId = activeLocation?.id ?? user?.locationId ?? ''
+  const selectedLocId = activeLocation?.id ?? user?.locationId ?? locations[0]?.id ?? ''
 
   const sched    = useSchedule(selectedLocId)
   const sets     = useSettings(selectedLocId)
@@ -454,7 +455,9 @@ export function SchedulePage() {
         </div>
       )}
 
-      {sched.loading ? <Spinner /> : (
+      {locationsLoading || sched.loading ? <Spinner /> : !selectedLocId ? (
+        <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhuma loja configurada.</CardContent></Card>
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* ── Weekly Schedule ──────────────────────────────────────────── */}
@@ -611,6 +614,24 @@ export function SchedulePage() {
                     </p>
                   </div>
                 )}
+
+                <div className="space-y-2 pt-1 border-t border-border">
+                  <label className="text-xs font-body font-semibold uppercase tracking-wide text-muted-foreground">
+                    Intervalo entre slots
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number" min={5} max={240} step={5}
+                      value={sets.settings.slotIntervalMins}
+                      onChange={e => sets.update({ slotIntervalMins: Math.min(240, Math.max(5, Number(e.target.value))) })}
+                      className="w-24 h-9 rounded-lg border border-input bg-muted/30 px-3 text-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-sm font-body text-muted-foreground">minutos</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground font-body">
+                    Define de quanto em quanto tempo começam os agendamentos. Ex.: 60 minutos mostra 09:00, 10:00, 11:00...
+                  </p>
+                </div>
 
                 {/* Min advance — always shown */}
                 <div className="space-y-1.5 pt-1 border-t border-border">

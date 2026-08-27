@@ -70,6 +70,7 @@ export interface CreateEmployeeData extends Partial<Employee> {
   lastName: string
   email: string
   password?: string
+  userId?: string
   phone?: string
 }
 
@@ -161,7 +162,8 @@ export interface FinancialSummary {
     pending: number
   }
   projectedRevenue: number
-  topServices: Array<{ name: string; revenue: number }>
+  topServices: Array<{ name: string; revenue: number; count: number }>
+  topServicesByVolume: Array<{ name: string; revenue: number; count: number }>
   locationRevenue: Record<string, number>
 }
 

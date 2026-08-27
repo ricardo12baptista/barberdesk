@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Plus, Scissors, Clock, Euro, Edit2, Trash2, CheckCircle, XCircle, Tag, Store, Building2 } from 'lucide-react'
+import { Plus, Scissors, Clock, Euro, Edit2, Trash2, CheckCircle, XCircle, Tag, Building2 } from 'lucide-react'
 import { useServices, useCreateService, useUpdateService, useDeleteService, useLocations } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -18,7 +18,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other:     'bg-slate-500/15  text-slate-400  border-slate-500/30',
 }
 
-function ServiceModal({ service, orgId, onClose }: { service: (Service & { locationIds?: string[] }) | null; orgId: string; onClose: () => void }) {
+function ServiceModal({ service, onClose }: { service: (Service & { locationIds?: string[] }) | null; onClose: () => void }) {
   const { t } = useTranslation()
   const { activeLocation } = useUIStore()
   const isEdit    = !!service
@@ -46,7 +46,11 @@ function ServiceModal({ service, orgId, onClose }: { service: (Service & { locat
     color:           service?.color           ?? '#6366f1',
   })
   const [selectedLocIds, setSelectedLocIds] = useState<string[]>(
-    service?.locationIds ?? existingLocIds ?? [activeLocation?.id ?? ''].filter(Boolean)
+    service?.locationIds ?? (isEdit ? existingLocIds : [activeLocation?.id ?? ''].filter(Boolean))
+  )
+  const defaultCategoryKeys = ['hair', 'beard', 'combo', 'treatment', 'other']
+  const [customCategory, setCustomCategory] = useState(
+    service?.category && !defaultCategoryKeys.includes(service.category) ? service.category : ''
   )
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
@@ -63,7 +67,8 @@ function ServiceModal({ service, orgId, onClose }: { service: (Service & { locat
     if (selectedLocIds.length === 0) { setError('Selecione pelo menos uma loja.'); return }
     setSaving(true)
     try {
-      const payload = { ...form, category: form.category as Service['category'], locationIds: selectedLocIds }
+      const category = customCategory.trim() || form.category
+      const payload = { ...form, category, locationIds: selectedLocIds }
       if (isEdit) await updateSvc.mutateAsync({ id: service!.id, data: payload })
       else        await createSvc.mutateAsync(payload)
       onClose()
@@ -123,7 +128,7 @@ function ServiceModal({ service, orgId, onClose }: { service: (Service & { locat
           </div>
 
           <div>
-            <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">{t('services.category')}</label>
+            <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">{t('services.categoryLabel')}</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map(c => (
                 <button key={c.key} onClick={() => set('category', c.key)}
@@ -133,6 +138,12 @@ function ServiceModal({ service, orgId, onClose }: { service: (Service & { locat
                 >{c.label}</button>
               ))}
             </div>
+            <input
+              value={customCategory}
+              onChange={e => setCustomCategory(e.target.value)}
+              placeholder="Ou escreva uma categoria personalizada"
+              className="w-full mt-2 rounded-lg border border-input bg-muted/30 px-3 py-2 text-xs font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -176,16 +187,15 @@ function ServiceModal({ service, orgId, onClose }: { service: (Service & { locat
 
 export function ServicesPage() {
   const { t } = useTranslation()
-  const { organization, user } = useAuthStore()
+  const { user } = useAuthStore()
   const { activeLocation } = useUIStore()
   const { data: services = [], isLoading } = useServices()
-  const { data: locations = [] } = useLocations()
   const deleteSvc = useDeleteService()
   const qc = useQueryClient()
 
   const [modalService,  setModalService]  = useState<Service | 'new' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Service | null>(null)
-  const canManage = user?.role === 'super_admin' || user?.role === 'manager'
+  const canManage = user?.role === 'super_admin' || user?.role === 'owner' || user?.role === 'manager'
 
   // Toggle per location
   const handleToggleLocation = async (svcId: string, locationId: string, currentlyActive: boolean) => {
@@ -197,9 +207,6 @@ export function ServicesPage() {
     }
   }
 
-  // Location map for display
-  const locMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
-
   const currentLocId = activeLocation?.id ?? user?.locationId
 
   const CATEGORIES: { key: string; label: string }[] = [
@@ -210,9 +217,15 @@ export function ServicesPage() {
     { key: 'other',     label: t('services.category.other')     },
   ]
 
-  const grouped = CATEGORIES.map(c => ({
+  const customCategories = Array.from(new Set(
+    services
+      .map(service => service.category)
+      .filter(category => category && !CATEGORIES.some(defaultCategory => defaultCategory.key === category))
+  )).map(category => ({ key: category, label: category }))
+
+  const grouped = [...CATEGORIES, ...customCategories].map(c => ({
     cat: c.key, label: c.label,
-    color: CATEGORY_COLORS[c.key],
+    color: CATEGORY_COLORS[c.key] ?? CATEGORY_COLORS.other,
     services: services.filter(s => s.category === c.key),
   })).filter(g => g.services.length > 0)
 
@@ -318,7 +331,6 @@ export function ServicesPage() {
       {modalService !== null && (
         <ServiceModal
           service={modalService === 'new' ? null : modalService}
-          orgId={organization?.id ?? ''}
           onClose={() => setModalService(null)}
         />
       )}

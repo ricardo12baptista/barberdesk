@@ -289,6 +289,7 @@ export function FinancialPage() {
   const statusRevenue  = finSummary?.revenueByStatus ?? { completed: 0, confirmed: 0, pending: 0 }
   const projectedRevenue = finSummary?.projectedRevenue ?? 0
   const topServices    = finSummary?.topServices ?? []
+  const topServicesByVolume = finSummary?.topServicesByVolume ?? []
   const locationRevMap = finSummary?.locationRevenue ?? {}
 
   const trendResponse = useRevenueTrend(effectiveLocationId, period, apiRefDate)
@@ -465,6 +466,39 @@ export function FinancialPage() {
                       </div>
                       <div className="h-1 rounded-full bg-muted">
                         <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                  {t('financial.topServicesByVolume')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {topServicesByVolume.length === 0 ? (
+                  <p className="text-sm text-muted-foreground font-body text-center py-4">{t('common.noResults')}</p>
+                ) : topServicesByVolume.map((svc, i) => {
+                  const maxCount = topServicesByVolume[0]?.count ?? 1
+                  const pct = (svc.count / (maxCount || 1)) * 100
+                  return (
+                    <div key={svc.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-muted-foreground/50 w-4">#{i + 1}</span>
+                          <span className="text-xs font-body text-foreground">{svc.name}</span>
+                        </div>
+                        <span className="text-xs font-display font-semibold text-foreground">
+                          {svc.count} {svc.count === 1 ? 'vez' : 'vezes'}
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-violet-500/70" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   )

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Crown, CheckCircle2, ArrowUpCircle, Clock, Save } from 'lucide-react'
+import { Crown, CheckCircle2, ArrowUpCircle, Clock, Save, Link2, Copy, Check } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useEmployees, useLocations } from '@/hooks'
 import { useUIStore } from '@/stores/ui.store'
@@ -209,6 +209,64 @@ function SubscriptionSettings() {
   )
 }
 
+// ─── Booking Link Section ──────────────────────────────────────────────────────
+// Link público de marcações (`/book/{orgSlug}`) que o dono pode partilhar com clientes.
+function BookingLinkCard() {
+  const { organization } = useAuthStore()
+  const [justCopied, setJustCopied] = useState(false)
+
+  const slug = organization?.slug
+  const bookingUrl = slug ? `${window.location.origin}/book/${slug}` : ''
+
+  if (!slug) return null
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(bookingUrl)
+    } catch {
+      // Fallback para browsers sem clipboard API
+      const ta = document.createElement('textarea')
+      ta.value = bookingUrl
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch { /* ignore */ }
+      document.body.removeChild(ta)
+    }
+    setJustCopied(true)
+    setTimeout(() => setJustCopied(false), 2000)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Link2 className="w-4 h-4 text-primary" /> Link de Marcações
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground font-body mb-3">
+          Partilha este link com os teus clientes para marcarem online.
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            readOnly
+            value={bookingUrl}
+            onFocus={(e) => e.currentTarget.select()}
+            className="flex-1 h-9 rounded-lg border border-input bg-muted/30 px-3 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-ring truncate"
+            aria-label="Link de marcações"
+          />
+          <Button size="sm" onClick={handleCopy}>
+            {justCopied
+              ? <><Check className="w-3.5 h-3.5" /> Copiado</>
+              : <><Copy className="w-3.5 h-3.5" /> Copiar</>
+            }
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function SettingsPage() {
   const { user }           = useAuthStore()
@@ -257,11 +315,14 @@ export function SettingsPage() {
     )
   }
 
-  // Super Admin only — subscription + plan info
+  // Owner / Super Admin — subscription info + shareable booking link
   return (
     <div>
       <PageHeader title="Configurações" />
-      <SubscriptionSettings />
+      <div className="space-y-4">
+        <BookingLinkCard />
+        <SubscriptionSettings />
+      </div>
     </div>
   )
 }

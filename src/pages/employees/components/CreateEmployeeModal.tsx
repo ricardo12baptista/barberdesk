@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { X, User, Mail, Lock, Phone, Percent, Scissors } from 'lucide-react'
 import { useCreateEmployee, useServices } from '@/hooks'
+import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import type { Employee } from '@/models'
@@ -14,6 +15,7 @@ interface Props {
 
 export function CreateEmployeeModal({ open, onClose, employee, locationId }: Props) {
   const isEdit = !!employee
+  const { user } = useAuthStore()
   const createEmployee = useCreateEmployee()
   const { data: services = [] } = useServices()
 
@@ -26,6 +28,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
     serviceIds:        [] as string[],
     isActive:          true,
   })
+  const [registerSelf, setRegisterSelf] = useState(false)
   useEffect(() => {
     if (!open) return
     if (employee) {
@@ -40,6 +43,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
       })
     } else {
       setForm({ name: '', email: '', phone: '', password: '', commissionPercent: 40, serviceIds: [], isActive: true })
+      setRegisterSelf(false)
     }
   }, [open, employee])
 
@@ -56,7 +60,8 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
       lastName,
       email:             form.email,
       phone:             form.phone,
-      password:          form.password,
+      password:          registerSelf ? undefined : form.password,
+      userId:            registerSelf ? user?.id : undefined,
       locationId,
       commissionPercent: form.commissionPercent,
       serviceIds:        form.serviceIds,
@@ -82,6 +87,11 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
             <p className="text-xs text-muted-foreground font-body mt-0.5">
               {isEdit ? 'Atualiza os dados do barbeiro' : 'Cria uma conta de acesso para o novo barbeiro'}
             </p>
+            {!isEdit && user?.role === 'owner' && (
+              <button type="button" onClick={() => { setRegisterSelf(v => !v); setForm(f => ({ ...f, name: !registerSelf ? user.name : '', email: !registerSelf ? user.email : '' })) }} className="mt-2 text-xs font-medium text-primary hover:underline">
+                {registerSelf ? 'Registar outra pessoa' : 'Sou eu, adicionar-me como barbeiro'}
+              </button>
+            )}
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
             <X className="w-4 h-4 text-muted-foreground" />
@@ -108,7 +118,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
               <Field label="Email" icon={Mail} required={!isEdit}>
                 <input
                   type="email"
-                  required={!isEdit}
+                  required={!isEdit && !registerSelf}
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                   placeholder="tiago@barbershop.pt"
@@ -131,7 +141,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
               <Field label="Palavra-passe de acesso" icon={Lock} required>
                 <input
                   type="password"
-                  required
+                  required={!registerSelf}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="Mínimo 8 caracteres"

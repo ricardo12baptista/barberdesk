@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts'
-import { TrendingUp, CalendarCheck2, Users, AlertTriangle, Scissors, Star } from 'lucide-react'
+import { TrendingUp, CalendarCheck2, CheckCircle2, AlertTriangle, Scissors, Star } from 'lucide-react'
 import { useAnalyticsSummary, useRevenueTrend, useAppointments, useClientsFlat, useServices, useEmployees } from '@/hooks'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -11,7 +11,7 @@ import {
   Card, CardContent, CardHeader, CardTitle,
   MetricCard, PageHeader, Avatar, Spinner
 } from '@/components/ui'
-import { formatCurrency, formatTime, formatPercent, cn } from '@/lib/utils'
+import { formatCurrency, formatTime, cn } from '@/lib/utils'
 import { format } from 'date-fns'
 
 // ─── 3 visible statuses ───────────────────────────────────────────────────────
@@ -85,16 +85,15 @@ export function DashboardPage() {
               subtitle={isOwnOnly ? 'as tuas hoje' : `Ticket médio ${formatCurrency(summary?.averageTicket ?? 0)}`}
               icon={CalendarCheck2}
             />
-            {!isOwnOnly && (
-              <MetricCard
-                title={t('dashboard.occupancyRate')}
-                value={formatPercent(summary?.occupancyRate ?? 0)}
-                icon={Users}
-              />
-            )}
             <MetricCard
-              title={t('dashboard.noShowRate')}
-              value={formatPercent(summary?.noShowRate ?? 0)}
+              title={t('dashboard.completedAppointments')}
+              value={summary?.completedAppointments ?? 0}
+              icon={CheckCircle2}
+              iconColor="text-green-500"
+            />
+            <MetricCard
+              title={t('dashboard.noShowCount')}
+              value={summary?.noShowCount ?? 0}
               icon={AlertTriangle}
               iconColor="text-amber-500"
             />

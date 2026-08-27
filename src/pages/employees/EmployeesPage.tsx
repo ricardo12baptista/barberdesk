@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Users, Plus, Percent, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useEmployees, useServices, useDeleteEmployee } from '@/hooks'
+import { useEmployees, useServices, useDeleteEmployee, useLocations } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { PageHeader, Card, CardContent, Badge, Avatar, Button, EmptyState, Spinner } from '@/components/ui'
@@ -18,7 +18,8 @@ export function EmployeesPage() {
   const { t } = useTranslation()
   const { user, organization } = useAuthStore()
   const { activeLocation } = useUIStore()
-  const locationId = activeLocation?.id ?? user?.locationId ?? 'loc-1'
+  const { data: locations = [] } = useLocations()
+  const locationId = activeLocation?.id ?? user?.locationId ?? locations[0]?.id ?? ''
   const plan = (organization?.plan ?? 'basic') as Plan
 
   const { data: employees = [], isLoading } = useEmployees(locationId)
@@ -177,11 +178,11 @@ function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
               </Badge>
             </div>
           </div>
-          {canManage && !isSelf && !showConfirm && (
+          {canManage && !showConfirm && (
             <button
               onClick={handleDismiss}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10 transition-all"
-              title="Despedir barbeiro"
+              title={isSelf ? 'Deixar de aparecer como barbeiro' : 'Despedir barbeiro'}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -192,8 +193,9 @@ function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
         {showConfirm && (
           <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20" onClick={e => e.stopPropagation()}>
             <p className="text-xs font-body text-red-400 mb-2">
-              Tens a certeza que queres despedir <strong>{employee.name}</strong>?
-              O barbeiro vai perder acesso ao sistema.
+              {isSelf
+                ? <>Queres deixar de aparecer como barbeiro nos agendamentos?</>
+                : <>Tens a certeza que queres despedir <strong>{employee.name}</strong>? O barbeiro vai perder acesso ao sistema.</>}
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -203,7 +205,7 @@ function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
                 loading={deleteEmployee.isPending}
                 className="h-7 text-xs"
               >
-                Sim, despedir
+                {isSelf ? 'Sim, remover da agenda' : 'Sim, despedir'}
               </Button>
               <Button
                 size="sm"

@@ -8,6 +8,7 @@ export interface Organization {
   slug: string
   logo?: string
   plan: 'basic' | 'pro' | 'premium' | 'enterprise'
+  isActive: boolean
   createdAt: string
 }
 
@@ -46,7 +47,7 @@ export interface Service {
   description?: string
   durationMinutes: number
   basePrice: number
-  category: 'hair' | 'beard' | 'combo' | 'treatment' | 'other'
+  category: string
   isActive: boolean
   color: string
   // New many-to-many fields

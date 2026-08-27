@@ -6,7 +6,7 @@ import { pt } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface PublicOrg    { id: string; name: string; slug: string; plan: string }
+interface PublicOrg    { id: string; name: string; slug: string; plan: string; isActive?: boolean }
 interface PublicLoc    { id: string; name: string; address: string; city: string }
 interface PublicSvc    { id: string; name: string; durationMinutes: number; basePrice: number; category: string; color: string }
 interface PublicEmp    { id: string; name: string; serviceIds: string[]; avatar?: string }
@@ -451,7 +451,18 @@ function StepConfirm({
           notes:          notes.trim(),
         }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        let msg = 'Ocorreu um erro. Por favor tente novamente.'
+        try {
+          const errData = await res.json()
+          if (errData?.code === 'ORGANIZATION_INACTIVE' || errData?.message) {
+            msg = errData.message || msg
+          }
+        } catch { /* ignore parse errors */ }
+        setError(msg)
+        setLoading(false)
+        return
+      }
       const data = await res.json()
       onConfirmed(data.appointmentId)
     } catch {
@@ -605,6 +616,22 @@ export function BookingPage() {
       <p className="text-sm text-muted-foreground font-body text-center">
         O link que seguiu não corresponde a nenhuma barbearia activa.
       </p>
+    </div>
+  )
+
+  // Org exists but is inactive → block booking with error message
+  if (orgData.isActive === false) return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+      <Scissors className="w-12 h-12 text-muted-foreground/30" />
+      <h1 className="font-display font-bold text-xl text-foreground">{orgData.name}</h1>
+      <div className="max-w-md w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center">
+        <p className="text-sm text-red-400 font-body">
+          Esta barbearia encontra-se temporariamente <strong>inativa</strong> e não está a aceitar novas marcações.
+        </p>
+        <p className="text-xs text-red-400/70 font-body mt-1">
+          Por favor, tente novamente mais tarde.
+        </p>
+      </div>
     </div>
   )
 

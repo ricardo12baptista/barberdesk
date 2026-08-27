@@ -34,6 +34,9 @@ export const handlers = [
     if (!user) return HttpResponse.json({ message: 'Utilizador não encontrado' }, { status: 404 })
 
     const org = mockOrganizations.find(o => o.id === user.organizationId)
+    if (!org) {
+      return HttpResponse.json({ message: 'Organização não encontrada' }, { status: 404 })
+    }
     return HttpResponse.json({ user, organization: org, token: `mock-jwt-${cred.userId}` })
   }),
 
@@ -264,13 +267,35 @@ export const handlers = [
       : mockAppointments.filter(a => a.locationId === locationId)
     const todayApts  = apts.filter(a => a.startsAt.startsWith(new Date().toISOString().slice(0, 10)))
     const revenue    = todayApts.filter(a => a.status === 'completed').reduce((s, a) => s + (a.price || 0), 0)
+    // Taxa de ocupação real: minutos ocupados / capacidade (horário de trabalho dos barbeiros)
+    const dow = new Date().getDay()
+    const empScope = locationId === 'all' ? mockEmployees : mockEmployees.filter(e => e.locationId === locationId)
+    let capacityMin = 0
+    let occupiedMin = 0
+    for (const e of empScope) {
+      const whs = mockWorkingHours.filter(h => h.employeeId === e.id && h.dayOfWeek === dow && h.isWorking !== false)
+      let cap = 0
+      for (const h of whs) {
+        const sh = parseInt(h.startTime, 10)
+        const eh = parseInt(h.endTime, 10)
+        cap += (eh - sh) * 60
+      }
+      capacityMin += cap
+      const booked = todayApts
+        .filter(a => a.employeeId === e.id && a.status !== 'cancelled' && a.status !== 'no_show')
+        .reduce((s, a) => s + ((new Date(a.endsAt).getTime() - new Date(a.startsAt).getTime()) / 60000), 0)
+      occupiedMin += Math.min(booked, cap)
+    }
+    const occupancyRate = capacityMin > 0 ? Math.min(1, occupiedMin / capacityMin) : 0
     return HttpResponse.json({
       locationId,
       period:        'day',
       revenue,
       appointments:  todayApts.length,
+      completedAppointments: todayApts.filter(a => a.status === 'completed').length,
+      noShowCount:   todayApts.filter(a => a.status === 'no_show').length,
       averageTicket: todayApts.length ? revenue / todayApts.filter(a => a.status === 'completed').length || 0 : 0,
-      occupancyRate: 0.72,
+      occupancyRate,
       noShowRate:    todayApts.filter(a => a.status === 'no_show').length / (todayApts.length || 1),
       topService:    'Corte + Barba',
       topEmployee:   mockEmployees.find(e => e.locationId === locationId)?.name ?? 'N/A',
@@ -607,14 +632,16 @@ export const handlers = [
     const projectedRevenue = revenueByStatus.completed + revenueByStatus.confirmed + revenueByStatus.pending
 
     // Top services
-    const svcRevMap: Record<string, { name: string; revenue: number }> = {}
+    const svcRevMap: Record<string, { name: string; revenue: number; count: number }> = {}
     for (const a of completedApts) {
       const svc = mockServices.find(s => s.id === a.serviceId)
       const name = svc?.name ?? a.serviceId
-      if (!svcRevMap[name]) svcRevMap[name] = { name, revenue: 0 }
+      if (!svcRevMap[name]) svcRevMap[name] = { name, revenue: 0, count: 0 }
       svcRevMap[name].revenue += getPrice(a)
+      svcRevMap[name].count += 1
     }
     const topServices = Object.values(svcRevMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+    const topServicesByVolume = Object.values(svcRevMap).sort((a, b) => b.count - a.count).slice(0, 5)
 
     // Revenue by location
     const locationRev: Record<string, number> = {}
@@ -636,6 +663,7 @@ export const handlers = [
       revenueByStatus,
       projectedRevenue,
       topServices,
+      topServicesByVolume,
       locationRevenue: locationRev,
     })
   }),
@@ -756,6 +784,7 @@ export const handlers = [
       name:      org.name,
       slug:      org.slug,
       plan:      org.plan,
+      isActive:  org.isActive ?? true,
       locations: mockLocations
         .filter(l => l.organizationId === org.id && l.isActive)
         .map(l => ({ id: l.id, name: l.name, address: l.address, city: l.city })),
@@ -767,6 +796,8 @@ export const handlers = [
   http.get(`${API}/public/services`, async ({ request }) => {
     await delay(DELAY)
     const orgId    = new URL(request.url).searchParams.get('orgId')
+    const org      = mockOrganizations.find(o => o.id === orgId)
+    if (!org || org.isActive === false) return HttpResponse.json([])
     const services = orgId
       ? mockServices.filter(s => s.organizationId === orgId && s.isActive)
       : []
@@ -930,8 +961,16 @@ export const handlers = [
       clientName: string; clientPhone: string; notes?: string
     }
 
+    const org = mockOrganizations.find(o => o.id === body.organizationId)
+    if (org && org.isActive === false) {
+      return HttpResponse.json({
+        message: "Esta barbearia encontra-se temporariamente inativa e não está a aceitar novas marcações.",
+        code: "ORGANIZATION_INACTIVE",
+      }, { status: 409 })
+    }
+
     const service = mockServices.find(s => s.id === body.serviceId)
-    if (!service) return HttpResponse.json({ message: 'Serviço não encontrado' }, { status: 404 })
+    if (!service) return HttpResponse.json({ message: "Serviço não encontrado" }, { status: 404 })
 
     // Find or create client by phone
     let client = mockClients.find(c =>
