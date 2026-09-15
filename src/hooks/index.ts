@@ -15,7 +15,7 @@ import {
 } from '@/api'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
-import type { Appointment, AppointmentStatus, Client, Location, Service } from '@/models'
+import type { Appointment, AppointmentStatus, Client, Employee, Location, Service } from '@/models'
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 export const qk = {
@@ -229,6 +229,15 @@ export const useCreateEmployee = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateEmployeeData) => employeesApi.create(data).then(r => r.data),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['employees'] }),
+  })
+}
+
+export const useUpdateEmployee = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Employee> }) =>
+      employeesApi.update(id, data).then(r => r.data),
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['employees'] }),
   })
 }

@@ -10,14 +10,6 @@ import { PageHeader, Card, CardContent, Badge, Button, Spinner, EmptyState, Inpu
 import { formatCurrency, getDurationLabel, cn } from '@/lib/utils'
 import type { Service } from '@/models'
 
-const CATEGORY_COLORS: Record<string, string> = {
-  hair:      'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
-  beard:     'bg-amber-500/15  text-amber-400  border-amber-500/30',
-  combo:     'bg-green-500/15  text-green-400  border-green-500/30',
-  treatment: 'bg-sky-500/15    text-sky-400    border-sky-500/30',
-  other:     'bg-slate-500/15  text-slate-400  border-slate-500/30',
-}
-
 function ServiceModal({ service, onClose }: { service: (Service & { locationIds?: string[] }) | null; onClose: () => void }) {
   const { t } = useTranslation()
   const { activeLocation } = useUIStore()
@@ -43,7 +35,6 @@ function ServiceModal({ service, onClose }: { service: (Service & { locationIds?
     durationMinutes: service?.durationMinutes ?? 30,
     basePrice:       service?.basePrice       ?? 15,
     description:     service?.description     ?? '',
-    color:           service?.color           ?? '#6366f1',
   })
   const [selectedLocIds, setSelectedLocIds] = useState<string[]>(
     service?.locationIds ?? (isEdit ? existingLocIds : [activeLocation?.id ?? ''].filter(Boolean))
@@ -165,14 +156,6 @@ function ServiceModal({ service, onClose }: { service: (Service & { locationIds?
               className="w-full rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
-          <div>
-            <label className="text-xs font-body font-medium text-muted-foreground block mb-1.5">{t('services.agendaColor')}</label>
-            <div className="flex items-center gap-3">
-              <input type="color" value={form.color} onChange={e => set('color', e.target.value)}
-                className="w-9 h-9 rounded-lg border border-border cursor-pointer bg-transparent p-1" />
-              <span className="text-xs font-mono text-muted-foreground">{form.color}</span>
-            </div>
-          </div>
         </div>
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
           <Button variant="outline" size="sm" onClick={onClose}>{t('common.cancel')}</Button>
@@ -225,7 +208,6 @@ export function ServicesPage() {
 
   const grouped = [...CATEGORIES, ...customCategories].map(c => ({
     cat: c.key, label: c.label,
-    color: CATEGORY_COLORS[c.key] ?? CATEGORY_COLORS.other,
     services: services.filter(s => s.category === c.key),
   })).filter(g => g.services.length > 0)
 
@@ -255,10 +237,10 @@ export function ServicesPage() {
         </CardContent></Card>
       ) : (
         <div className="space-y-6">
-          {grouped.map(({ cat, label, color, services: catServices }) => (
+          {grouped.map(({ cat, label, services: catServices }) => (
             <div key={cat}>
               <div className="flex items-center gap-3 mb-3">
-                <Badge className={cn(color, 'gap-1.5')}><Tag className="w-3 h-3" />{label}</Badge>
+                <Badge className="gap-1.5"><Tag className="w-3 h-3" />{label}</Badge>
                 <div className="flex-1 h-px bg-border" />
                 <span className="text-xs text-muted-foreground font-body">{catServices.length}</span>
               </div>
@@ -273,8 +255,6 @@ export function ServicesPage() {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-3 h-3 rounded-full flex-shrink-0 border-2"
-                              style={{ backgroundColor: svc.color + '33', borderColor: svc.color }} />
                             <p className="font-display font-semibold text-sm text-foreground truncate">{svc.name}</p>
                           </div>
                           {currentLocId && (
@@ -285,9 +265,9 @@ export function ServicesPage() {
                             </Badge>
                           )}
                         </div>
-                        {svc.description && (
-                          <p className="text-xs text-muted-foreground font-body mb-3 line-clamp-2">{svc.description}</p>
-                        )}
+                        <p className="text-xs text-muted-foreground font-body mb-3 min-h-[2.25rem] line-clamp-2">
+                          {svc.description}
+                        </p>
 
                         <div className="flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1.5 text-foreground font-display font-semibold">

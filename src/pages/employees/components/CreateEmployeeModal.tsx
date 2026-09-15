@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { X, User, Mail, Lock, Phone, Percent, Scissors } from 'lucide-react'
-import { useCreateEmployee, useServices } from '@/hooks'
+import { useCreateEmployee, useUpdateEmployee, useServices } from '@/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
   const isEdit = !!employee
   const { user } = useAuthStore()
   const createEmployee = useCreateEmployee()
+  const updateEmployee = useUpdateEmployee()
   const { data: services = [] } = useServices()
 
   const [form, setForm] = useState({
@@ -55,19 +56,35 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
     const firstName = nameParts[0] || ''
     const lastName = nameParts.slice(1).join(' ') || ''
 
-    await createEmployee.mutateAsync({
-      firstName,
-      lastName,
-      email:             form.email,
-      phone:             form.phone,
-      password:          registerSelf ? undefined : form.password,
-      userId:            registerSelf ? user?.id : undefined,
-      locationId,
-      commissionPercent: form.commissionPercent,
-      serviceIds:        form.serviceIds,
-      isActive:          form.isActive,
-      // userId will be created server-side when backend creates the user account
-    })
+    if (isEdit && employee) {
+      // Editar um barbeiro existente → PUT /employees/:id
+      await updateEmployee.mutateAsync({
+        id: employee.id,
+        data: {
+          firstName,
+          lastName,
+          phone:             form.phone,
+          commissionPercent: form.commissionPercent,
+          serviceIds:        form.serviceIds,
+          isActive:          form.isActive,
+        },
+      })
+    } else {
+      // Criar novo barbeiro (ou registo do dono como barbeiro) → POST /employees
+      await createEmployee.mutateAsync({
+        firstName,
+        lastName,
+        email:             form.email,
+        phone:             form.phone,
+        password:          registerSelf ? undefined : form.password,
+        userId:            registerSelf ? user?.id : undefined,
+        locationId,
+        commissionPercent: form.commissionPercent,
+        serviceIds:        form.serviceIds,
+        isActive:          form.isActive,
+        // userId will be created server-side when backend creates the user account
+      })
+    }
     onClose()
   }
 
@@ -201,7 +218,6 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
                             : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/40'
                         )}
                       >
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
                         <span className="truncate">{svc.name}</span>
                         {checked && <span className="ml-auto text-primary flex-shrink-0">✓</span>}
                       </button>
@@ -238,7 +254,7 @@ export function CreateEmployeeModal({ open, onClose, employee, locationId }: Pro
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" loading={createEmployee.isPending}>
+            <Button type="submit" size="sm" loading={isEdit ? updateEmployee.isPending : createEmployee.isPending}>
               {isEdit ? 'Guardar alterações' : 'Criar conta'}
             </Button>
           </div>

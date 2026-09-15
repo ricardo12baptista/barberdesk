@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CalendarDays, CalendarCheck2, Users, UserCircle,
   Scissors, MapPin, BarChart3, Settings, TrendingUp,
   ChevronLeft, ChevronRight, ChevronsUpDown, Star, Crown,
-  LogOut, ChevronDown, ChevronUp, Shield, Briefcase, User, CalendarCheck,
+  LogOut, ChevronDown, ChevronUp, Shield, Briefcase, User, CalendarCheck, Check,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
@@ -40,12 +40,27 @@ export function Sidebar() {
   const { data: locations = [] } = useLocations()
 
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [locationMenuOpen, setLocationMenuOpen] = useState(false)
+  const locationMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (activeLocation && !locations.some(location => location.id === activeLocation.id)) {
       setActiveLocation(null)
     }
   }, [activeLocation, locations, setActiveLocation])
+
+  useEffect(() => {
+    if (!locationMenuOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (locationMenuRef.current && !locationMenuRef.current.contains(event.target as Node)) {
+        setLocationMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [locationMenuOpen])
 
   if (!user) return null
 
@@ -166,24 +181,72 @@ export function Sidebar() {
           <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-widest mb-1.5 font-display">
             {t('locations.title')}
           </p>
-          <div className="relative">
-            <select
-              value={activeLocation?.id ?? locations[0]?.id ?? ''}
-              onChange={e => {
-                const loc = locations.find(l => l.id === e.target.value) ?? null
-                if (loc) setActiveLocation(loc)
-              }}
+          <div className="relative group" ref={locationMenuRef}>
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center pointer-events-none transition-colors group-hover:bg-primary/25">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={locationMenuOpen}
+              onClick={() => setLocationMenuOpen(open => !open)}
               className={cn(
-                'w-full h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
-                'bg-sidebar-foreground/5 border border-sidebar-border',
-                'text-sidebar-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+                'w-full h-11 rounded-xl pl-11 pr-8 text-left text-xs font-body transition-all',
+                'bg-sidebar-foreground/[0.06] border border-sidebar-border/80 shadow-sm',
+                'text-sidebar-foreground hover:bg-sidebar-foreground/[0.1] hover:border-sidebar-foreground/20',
+                'focus:outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/20',
+                locationMenuOpen && 'border-primary/70 ring-2 ring-primary/20 bg-sidebar-foreground/[0.1]',
               )}
             >
-              {locations.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-sidebar-foreground/40 pointer-events-none" />
+              <span className="block truncate">{activeLocation?.name ?? locations[0]?.name}</span>
+            </button>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1.5">
+              <span className="w-px h-4 bg-sidebar-border" />
+              <ChevronsUpDown className="w-3.5 h-3.5 text-sidebar-foreground/45 transition-colors group-hover:text-sidebar-foreground/70" />
+            </div>
+            {locationMenuOpen && (
+              <div
+                role="listbox"
+                aria-label={t('locations.title')}
+                className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-sidebar-border bg-sidebar shadow-xl shadow-black/25 p-1.5 animate-in fade-in-0 zoom-in-95 duration-150"
+              >
+                <div className="px-2.5 py-1.5 text-[10px] uppercase tracking-widest text-sidebar-foreground/35 font-display">
+                  {t('locations.title')}
+                </div>
+                <div className="max-h-52 overflow-y-auto scrollbar-thin">
+                  {locations.map(location => {
+                    const isActive = (activeLocation?.id ?? locations[0]?.id) === location.id
+
+                    return (
+                      <button
+                        key={location.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isActive}
+                        onClick={() => {
+                          setActiveLocation(location)
+                          setLocationMenuOpen(false)
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left text-xs font-body transition-colors',
+                          'text-sidebar-foreground/65 hover:bg-sidebar-foreground/[0.08] hover:text-sidebar-foreground',
+                          isActive && 'bg-primary/12 text-sidebar-foreground',
+                        )}
+                      >
+                        <span className={cn(
+                          'w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0',
+                          isActive ? 'bg-primary/20 text-primary' : 'bg-sidebar-foreground/[0.06] text-sidebar-foreground/40',
+                        )}>
+                          <MapPin className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="truncate flex-1">{location.name}</span>
+                        {isActive && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

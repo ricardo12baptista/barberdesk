@@ -49,7 +49,6 @@ export interface Service {
   basePrice: number
   category: string
   isActive: boolean
-  color: string
   // New many-to-many fields
   locationActive?: boolean       // whether service is active for the requested location
   locationPrice?: number | null  // per-location price override
@@ -68,6 +67,9 @@ export interface Employee {
   userId: string
   locationId: string
   name: string
+  firstName?: string
+  lastName?: string
+  phone?: string
   avatar?: string
   bio?: string
   serviceIds: string[]   // IDs of services this employee performs

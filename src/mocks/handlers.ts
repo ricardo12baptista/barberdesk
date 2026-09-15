@@ -98,13 +98,25 @@ export const handlers = [
     }, { status: 201 })
   }),
 
+  http.put(`${API}/employees/:id`, async ({ params, request }) => {
+    await delay(DELAY)
+    const body = (await request.json()) as Record<string, unknown>
+    const emp  = mockEmployees.find(e => e.id === params.id)
+    if (!emp) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const parts  = (emp.name ?? '').split(' ')
+    const first  = (body.firstName as string) ?? parts[0] ?? ''
+    const last   = (body.lastName  as string) ?? parts.slice(1).join(' ') ?? ''
+    Object.assign(emp, body, { name: `${first} ${last}`.trim() })
+    return HttpResponse.json({ ...emp })
+  }),
+
   http.patch(`${API}/employees/:id`, async ({ params, request }) => {
     await delay(DELAY)
     const body = (await request.json()) as Record<string, unknown>
     const emp  = mockEmployees.find(e => e.id === params.id)
-    return emp
-      ? HttpResponse.json({ ...emp, ...body })
-      : HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    if (!emp) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    Object.assign(emp, body)
+    return HttpResponse.json({ ...emp, ...body })
   }),
 
   http.delete(`${API}/employees/:id`, async ({ params }) => {
@@ -522,7 +534,7 @@ export const handlers = [
       .map(svcId => {
         const svc = mockServices.find(s => s.id === svcId)
         const sa = completedApts.filter(a => a.serviceId === svcId)
-        return { service: { id: svcId, name: svc?.name ?? svcId, color: svc?.color ?? '#6366f1' }, count: sa.length, revenue: sa.reduce((s, a) => s + getPrice(a), 0) }
+        return { service: { id: svcId, name: svc?.name ?? svcId }, count: sa.length, revenue: sa.reduce((s, a) => s + getPrice(a), 0) }
       })
       .filter(s => s.count > 0)
       .sort((a, b) => b.count - a.count)
@@ -802,8 +814,8 @@ export const handlers = [
       ? mockServices.filter(s => s.organizationId === orgId && s.isActive)
       : []
     return HttpResponse.json(services.map(s => ({
-      id: s.id, name: s.name, durationMinutes: s.durationMinutes,
-      basePrice: s.basePrice, category: s.category, color: s.color,
+      id: s.id, name: s.name, description: s.description, durationMinutes: s.durationMinutes,
+      basePrice: s.basePrice, category: s.category,
     })))
   }),
 
@@ -818,10 +830,9 @@ export const handlers = [
     let employees = mockEmployees.filter(e => e.locationId === locationId && e.isActive)
 
     // Filter to employees who perform this service (via serviceIds association).
-    // If only 1 employee exists, they do all services — skip filtering.
-    if (serviceId && employees.length > 1) {
-      const filtered = employees.filter(e => (e.serviceIds ?? []).includes(serviceId))
-      if (filtered.length > 0) employees = filtered
+    // Só barbeiros que executam o serviço devem aparecer — se nenhum, devolvemos [empty].
+    if (serviceId) {
+      employees = employees.filter(e => (e.serviceIds ?? []).includes(serviceId))
     }
 
     return HttpResponse.json(employees.map(e => ({
@@ -887,10 +898,14 @@ export const handlers = [
     if (isClosed) return HttpResponse.json([])
 
     const duration  = service.durationMinutes
-    const employees = mockEmployees.filter(e =>
+    let employees = mockEmployees.filter(e =>
       e.locationId === locationId && e.isActive &&
       (!empFilter || e.id === empFilter)
     )
+    // Nome: filtra aos barbeiros que realmente executam este serviço
+    if (serviceId) {
+      employees = employees.filter(e => (e.serviceIds ?? []).includes(serviceId))
+    }
 
     // Get all existing appointments for this day at this location
     const dayApts = mockAppointments.filter(a =>
@@ -899,7 +914,7 @@ export const handlers = [
     )
 
     // Generate slots: 09:00 – 19:00 in 30-min increments
-    const slots: { time: string; startsAt: string; employeeId: string; employeeName: string }[] = []
+    const slots: { time: string; startsAt: string; employeeId: string; employeeName: string; employeeTooltip?: string }[] = []
     const [year, month, day] = dateStr.split('-').map(Number)
 
     for (const emp of employees) {
@@ -944,6 +959,14 @@ export const handlers = [
           slots.push({ time: `${hh}:${mm}`, startsAt, employeeId: emp.id, employeeName: emp.name })
         }
         current += 30
+      }
+    }
+
+    // "Qualquer barbeiro" lista TODAS as slots, uma por barbeiro — o frontend
+    // agrupa por barbeiro. Nome completo distingue homónimos.
+    if (!empFilter) {
+      for (const s of slots) {
+        if (!s.employeeTooltip) s.employeeTooltip = s.employeeName
       }
     }
 
@@ -1028,7 +1051,6 @@ export const handlers = [
       id:              apt.id,
       clientName:      client?.name  ?? 'Cliente',
       serviceName:     service?.name ?? apt.serviceId,
-      serviceColor:    service?.color ?? '#6366f1',
       durationMinutes: service?.durationMinutes ?? 30,
       employeeName:    employee?.name ?? apt.employeeId,
       locationName:    location?.name ?? apt.locationId,

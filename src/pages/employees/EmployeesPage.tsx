@@ -43,10 +43,13 @@ export function EmployeesPage() {
         actions={
           <Button
             onClick={() => {
-              if (atLimit) return
               setSelectedEmployee(null)
               setModalOpen(true)
             }}
+            disabled={atLimit}
+            title={atLimit
+              ? t('employees.limitReached', { max: planConfig.maxBarbers, plan: planConfig.name })
+              : undefined}
             variant={atLimit ? 'outline' : 'primary'}
           >
             <Plus className="w-4 h-4" />
@@ -128,7 +131,7 @@ export function EmployeesPage() {
 // ─── Employee Card ─────────────────────────────────────────────────────────────
 function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
   employee: Employee; isSelf: boolean; onClick: () => void; canManage: boolean
-  serviceMap: Record<string, { name: string; color: string }>
+  serviceMap: Record<string, { name: string }>
 }) {
   const [showConfirm, setShowConfirm] = useState(false)
   const deleteEmployee = useDeleteEmployee()
@@ -226,7 +229,6 @@ function EmployeeCard({ employee, isSelf, onClick, canManage, serviceMap }: {
               const svc = serviceMap[id]
               return svc ? (
                 <span key={id} className="flex items-center gap-1 text-[10px] font-body px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
                   {svc.name}
                 </span>
               ) : null

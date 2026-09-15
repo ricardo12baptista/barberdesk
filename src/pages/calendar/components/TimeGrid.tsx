@@ -1,5 +1,7 @@
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { format, isSameDay } from 'date-fns'
+import { enGB, pt } from 'date-fns/locale'
 import { HOUR_START, HOUR_END, SLOT_HEIGHT, aptTop, aptHeight } from '../useCalendar'
 import { cn } from '@/lib/utils'
 import type { Appointment, Client, Employee, Service } from '@/models'
@@ -104,6 +106,8 @@ function HourLines({ hours }: { hours: number[] }) {
 }
 
 export function TimeGrid({ hours, days, employees, appointments, mode, clientMap = {}, serviceMap = {}, onSlotClick, onAptClick, onAptDrop }: Props) {
+  const { i18n } = useTranslation()
+  const dateLocale = i18n.language === 'en' ? enGB : pt
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragging  = useRef<string | null>(null)
   const totalHeight = (HOUR_END - HOUR_START) * SLOT_HEIGHT
@@ -165,7 +169,7 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
             <div className="w-16 flex-shrink-0 border-r border-border" />
             <div className={cn('flex-1 h-10 flex items-center justify-center', isToday && 'bg-primary/5')}>
               <span className={cn('text-xs font-display font-semibold', isToday ? 'text-primary' : 'text-muted-foreground')}>
-                {format(date, 'EEEE, d MMMM')}
+                {format(date, 'EEEE, d MMMM', { locale: dateLocale })}
               </span>
             </div>
           </div>
@@ -349,7 +353,7 @@ export function TimeGrid({ hours, days, employees, appointments, mode, clientMap
             return (
               <div key={i} className={cn('flex-1 h-10 flex items-center justify-center border-r border-border last:border-r-0', isToday && 'bg-primary/5')}>
                 <span className={cn('text-xs font-display font-semibold', isToday ? 'text-primary' : 'text-muted-foreground')}>
-                  {format(day, 'EEE d')}
+                  {format(day, 'EEE d', { locale: dateLocale })}
                 </span>
               </div>
             )

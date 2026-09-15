@@ -8,7 +8,6 @@ interface BookedApt {
   id: string
   clientName: string
   serviceName: string
-  serviceColor: string
   durationMinutes: number
   employeeName: string
   locationName: string
@@ -78,7 +77,6 @@ export function BookingConfirmedPage() {
           {/* Details card */}
           <div className="rounded-2xl border border-border bg-card text-left overflow-hidden mb-6">
             <div className="flex items-center gap-3 p-4 border-b border-border">
-              <div className="w-2.5 h-12 rounded-full flex-shrink-0" style={{ backgroundColor: apt.serviceColor }} />
               <div>
                 <p className="font-display font-bold text-foreground text-lg">{apt.serviceName}</p>
                 <p className="text-sm text-muted-foreground font-body">{apt.locationName}</p>

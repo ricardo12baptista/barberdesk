@@ -263,30 +263,30 @@ export const mockEmployees     = [...emps1, ...emps2, ...emps3, ...emps4, ...emp
 // ─────────────────────────────────────────────────────────────────────────────
 export const mockServices: Service[] = [
   // Org 1 — BarberKing
-  { id: 'svc-1-1', organizationId: 'org-1', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 15, category: 'hair',      isActive: true, color: '#6366f1' },
-  { id: 'svc-1-2', organizationId: 'org-1', name: 'Fade / Degradê',     durationMinutes: 45, basePrice: 18, category: 'hair',      isActive: true, color: '#8b5cf6' },
-  { id: 'svc-1-3', organizationId: 'org-1', name: 'Barba Completa',     durationMinutes: 30, basePrice: 12, category: 'beard',     isActive: true, color: '#f59e0b' },
-  { id: 'svc-1-4', organizationId: 'org-1', name: 'Corte + Barba',      durationMinutes: 60, basePrice: 25, category: 'combo',     isActive: true, color: '#22c55e' },
-  { id: 'svc-1-5', organizationId: 'org-1', name: 'Tratamento Capilar', durationMinutes: 45, basePrice: 20, category: 'treatment', isActive: true, color: '#ec4899' },
-  { id: 'svc-1-6', organizationId: 'org-1', name: 'Sobrancelha',        durationMinutes: 15, basePrice:  8, category: 'other',     isActive: true, color: '#14b8a6' },
+  { id: 'svc-1-1', organizationId: 'org-1', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 15, category: 'hair',      isActive: true },
+  { id: 'svc-1-2', organizationId: 'org-1', name: 'Fade / Degradê',     durationMinutes: 45, basePrice: 18, category: 'hair',      isActive: true },
+  { id: 'svc-1-3', organizationId: 'org-1', name: 'Barba Completa',    durationMinutes: 30, basePrice: 12, category: 'beard',     isActive: true },
+  { id: 'svc-1-4', organizationId: 'org-1', name: 'Corte + Barba',     durationMinutes: 60, basePrice: 25, category: 'combo',     isActive: true },
+  { id: 'svc-1-5', organizationId: 'org-1', name: 'Tratamento Capilar', durationMinutes: 45, basePrice: 20, category: 'treatment', isActive: true },
+  { id: 'svc-1-6', organizationId: 'org-1', name: 'Sobrancelha',        durationMinutes: 15, basePrice:  8, category: 'other',     isActive: true },
   // Org 2 — BarberStyle
-  { id: 'svc-2-1', organizationId: 'org-2', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 16, category: 'hair',      isActive: true, color: '#6366f1' },
-  { id: 'svc-2-2', organizationId: 'org-2', name: 'Fade',               durationMinutes: 45, basePrice: 20, category: 'hair',      isActive: true, color: '#8b5cf6' },
-  { id: 'svc-2-3', organizationId: 'org-2', name: 'Barba',              durationMinutes: 25, basePrice: 12, category: 'beard',     isActive: true, color: '#f59e0b' },
-  { id: 'svc-2-4', organizationId: 'org-2', name: 'Corte + Barba',      durationMinutes: 55, basePrice: 26, category: 'combo',     isActive: true, color: '#22c55e' },
+  { id: 'svc-2-1', organizationId: 'org-2', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 16, category: 'hair',      isActive: true },
+  { id: 'svc-2-2', organizationId: 'org-2', name: 'Fade',               durationMinutes: 45, basePrice: 20, category: 'hair',      isActive: true },
+  { id: 'svc-2-3', organizationId: 'org-2', name: 'Barba',              durationMinutes: 25, basePrice: 12, category: 'beard',     isActive: true },
+  { id: 'svc-2-4', organizationId: 'org-2', name: 'Corte + Barba',      durationMinutes: 55, basePrice: 26, category: 'combo',     isActive: true },
   // Org 3 — CorteFino
-  { id: 'svc-3-1', organizationId: 'org-3', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 18, category: 'hair',      isActive: true, color: '#6366f1' },
-  { id: 'svc-3-2', organizationId: 'org-3', name: 'Fade',               durationMinutes: 40, basePrice: 22, category: 'hair',      isActive: true, color: '#8b5cf6' },
-  { id: 'svc-3-3', organizationId: 'org-3', name: 'Barba',              durationMinutes: 25, basePrice: 14, category: 'beard',     isActive: true, color: '#f59e0b' },
-  { id: 'svc-3-4', organizationId: 'org-3', name: 'Corte + Barba',      durationMinutes: 55, basePrice: 30, category: 'combo',     isActive: true, color: '#22c55e' },
+  { id: 'svc-3-1', organizationId: 'org-3', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 18, category: 'hair',      isActive: true },
+  { id: 'svc-3-2', organizationId: 'org-3', name: 'Fade',               durationMinutes: 40, basePrice: 22, category: 'hair',      isActive: true },
+  { id: 'svc-3-3', organizationId: 'org-3', name: 'Barba',              durationMinutes: 25, basePrice: 14, category: 'beard',     isActive: true },
+  { id: 'svc-3-4', organizationId: 'org-3', name: 'Corte + Barba',      durationMinutes: 55, basePrice: 30, category: 'combo',     isActive: true },
   // Org 4 — Barbearia do Zé
-  { id: 'svc-4-1', organizationId: 'org-4', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 12, category: 'hair',      isActive: true, color: '#6366f1' },
-  { id: 'svc-4-2', organizationId: 'org-4', name: 'Barba',              durationMinutes: 20, basePrice:  8, category: 'beard',     isActive: true, color: '#f59e0b' },
-  { id: 'svc-4-3', organizationId: 'org-4', name: 'Corte + Barba',      durationMinutes: 50, basePrice: 18, category: 'combo',     isActive: true, color: '#22c55e' },
+  { id: 'svc-4-1', organizationId: 'org-4', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 12, category: 'hair',      isActive: true },
+  { id: 'svc-4-2', organizationId: 'org-4', name: 'Barba',              durationMinutes: 20, basePrice:  8, category: 'beard',     isActive: true },
+  { id: 'svc-4-3', organizationId: 'org-4', name: 'Corte + Barba',      durationMinutes: 50, basePrice: 18, category: 'combo',     isActive: true },
   // Org 5 — BarberDesk Demo
-  { id: 'svc-5-1', organizationId: 'org-5', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 15, category: 'hair',      isActive: true, color: '#6366f1' },
-  { id: 'svc-5-2', organizationId: 'org-5', name: 'Barba Completa',     durationMinutes: 30, basePrice: 12, category: 'beard',     isActive: true, color: '#f59e0b' },
-  { id: 'svc-5-3', organizationId: 'org-5', name: 'Corte + Barba',      durationMinutes: 60, basePrice: 25, category: 'combo',     isActive: true, color: '#22c55e' },
+  { id: 'svc-5-1', organizationId: 'org-5', name: 'Corte Clássico',     durationMinutes: 30, basePrice: 15, category: 'hair',      isActive: true },
+  { id: 'svc-5-2', organizationId: 'org-5', name: 'Barba Completa',     durationMinutes: 30, basePrice: 12, category: 'beard',     isActive: true },
+  { id: 'svc-5-3', organizationId: 'org-5', name: 'Corte + Barba',      durationMinutes: 60, basePrice: 25, category: 'combo',     isActive: true },
 ]
 
 

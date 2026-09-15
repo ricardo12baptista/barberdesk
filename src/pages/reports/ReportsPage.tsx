@@ -163,39 +163,43 @@ export function ReportsPage() {
         subtitle={`${totalApts} ${t('reports.appointments').toLowerCase()} · ${formatCurrency(totalRevenue)} · ${rangeLabel}`}
       />
 
-      {/* ── Location filter (super_admin only) defaults to "Todas as Lojas" ── */}
-      {isSuperAdmin && locations.length > 1 && (
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative">
-            <select
-              value={reportLocationId ?? 'all'}
-              onChange={e => { setReportLocationId(e.target.value === 'all' ? undefined : e.target.value); setClientPage(1) }}
-              className={cn(
-                'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
-                'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
-              )}
-            >
-              <option value="all">Todas as Lojas</option>
-              {locations.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+      <div className="mb-5 rounded-xl border border-border/70 bg-card/60 p-3 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-display uppercase tracking-widest text-muted-foreground/60">Período do relatório</p>
+            <p className="text-xs font-body text-muted-foreground mt-0.5">{rangeLabel}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {isSuperAdmin && locations.length > 1 && (
+              <div className="relative">
+                <select
+                  value={reportLocationId ?? 'all'}
+                  onChange={e => { setReportLocationId(e.target.value === 'all' ? undefined : e.target.value); setClientPage(1) }}
+                  className={cn(
+                    'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
+                    'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+                  )}
+                >
+                  <option value="all">Todas as Lojas</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+              </div>
+            )}
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+              {RANGES.map(r => (
+                <button key={r.key} onClick={r.key === 'custom' ? handleCustomClick : () => { setRangeKey(r.key); setClientPage(1) }}
+                  className={cn('h-7 px-3 rounded-md text-xs font-body font-medium transition-all',
+                    rangeKey === r.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >{r.label}</button>
               ))}
-            </select>
-            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Date range */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          {RANGES.map(r => (
-            <button key={r.key} onClick={r.key === 'custom' ? handleCustomClick : () => { setRangeKey(r.key); setClientPage(1) }}
-              className={cn('h-7 px-3 rounded-md text-xs font-body font-medium transition-all',
-                rangeKey === r.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >{r.label}</button>
-          ))}
-        </div>
         {rangeKey === 'custom' && (
           <Popover>
             <PopoverTrigger asChild>
@@ -208,9 +212,7 @@ export function ReportsPage() {
                 )}
               >
                 <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="flex-1 truncate">
-                  {dateDisplay || 'Selecionar datas'}
-                </span>
+                <span className="flex-1 truncate">{dateDisplay || 'Selecionar datas'}</span>
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -226,17 +228,19 @@ export function ReportsPage() {
             </PopoverContent>
           </Popover>
         )}
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-5 bg-muted rounded-lg p-1 w-fit">
-        {TABS.map(tab_ => (
-          <button key={tab_.key} onClick={() => setTab(tab_.key)}
-            className={cn('flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-body font-medium transition-all',
-              tab === tab_.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            )}
-          ><tab_.icon className="w-3.5 h-3.5" />{tab_.label}</button>
-        ))}
+        <div className="border-t border-border/60 pt-3">
+          <p className="text-[10px] font-display uppercase tracking-widest text-muted-foreground/60 mb-1.5">Explorar dados</p>
+          <div className="flex flex-wrap items-center gap-1 bg-muted rounded-lg p-1 w-fit">
+            {TABS.map(tab_ => (
+              <button key={tab_.key} onClick={() => setTab(tab_.key)}
+                className={cn('flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-body font-medium transition-all',
+                  tab === tab_.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                )}
+              ><tab_.icon className="w-3.5 h-3.5" />{tab_.label}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {isLoading ? <Spinner /> : (
@@ -491,7 +495,6 @@ export function ReportsPage() {
                     <tr key={svc.service.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: svc.service.color }} />
                           <span className="font-body font-medium text-foreground">{svc.service.name}</span>
                         </div>
                       </td>

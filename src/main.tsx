@@ -8,10 +8,11 @@ import './index.css'
 import { router } from './router'
 
 // ─── Apply saved theme before render ──────────────────────────────────────────
-const saved = localStorage.getItem('barberdesk-ui')
+const saved = localStorage.getItem('businessdesk-ui')
 if (saved) {
   const { state } = JSON.parse(saved) as { state?: { theme?: string } }
-  if (state?.theme === 'dark' || (!state?.theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  const followsSystem = state?.theme === 'system' || !state?.theme
+  if (state?.theme === 'dark' || (followsSystem && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.classList.add('dark')
   }
 } else {

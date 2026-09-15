@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils'
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PublicOrg    { id: string; name: string; slug: string; plan: string; isActive?: boolean }
 interface PublicLoc    { id: string; name: string; address: string; city: string }
-interface PublicSvc    { id: string; name: string; durationMinutes: number; basePrice: number; category: string; color: string }
+interface PublicSvc    { id: string; name: string; description?: string; durationMinutes: number; basePrice: number; category: string }
 interface PublicEmp    { id: string; name: string; serviceIds: string[]; avatar?: string }
-interface TimeSlot     { time: string; startsAt: string; employeeId: string; employeeName: string }
+interface TimeSlot     { time: string; startsAt: string; employeeId: string; employeeName: string; employeeTooltip?: string }
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 const STEPS = ['Loja', 'Serviço', 'Data & Hora', 'Os seus dados']
@@ -134,9 +134,11 @@ function StepService({
                   onClick={() => onSelect(svc)}
                   className="w-full flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
                 >
-                  <div className="w-3 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
                   <div className="flex-1 min-w-0">
                     <p className="font-body font-semibold text-foreground">{svc.name}</p>
+                    {svc.description && (
+                      <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">{svc.description}</p>
+                    )}
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-muted-foreground font-body flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {svc.durationMinutes} min
@@ -260,6 +262,7 @@ function StepDateTime({
   const today = startOfDay(new Date())
 
   const [employees,     setEmployees]     = useState<PublicEmp[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(true)
   const [selectedEmpId, setSelectedEmpId] = useState<string>('any')
   const [selectedDate,  setSelectedDate]  = useState<Date>(addDays(today, 1))
   const [slots,         setSlots]         = useState<TimeSlot[]>([])
@@ -268,13 +271,16 @@ function StepDateTime({
 
   // Load employees
   useEffect(() => {
+    setLoadingEmployees(true)
     fetch(`/api/public/employees?locationId=${loc.id}&serviceId=${svc.id}`)
       .then(r => r.json())
       .then((data: PublicEmp[]) => {
         setEmployees(data)
-        // Auto-select if only one barber available
+        // Auto-select if only one barber performs this service
         if (data.length === 1) setSelectedEmpId(data[0].id)
       })
+      .catch(() => setEmployees([]))
+      .finally(() => setLoadingEmployees(false))
   }, [loc.id, svc.id])
 
   // Pre-fetch available days (single efficient call instead of 60 individual requests)
@@ -300,11 +306,42 @@ function StepDateTime({
       .catch(() => setLoadingSlots(false))
   }, [selectedDate, selectedEmpId, loc.id, svc.id])
 
+  // Em "Qualquer barbeiro" as slots vêm por barbeiro — agrupar para o cliente ver
+  // os horários de cada barbeiro em seções claras.
+  const groupedSlots = useMemo(() => {
+    if (selectedEmpId !== 'any') return null
+    const map = new Map<string, { id: string; name: string; slots: TimeSlot[] }>()
+    for (const s of slots) {
+      const existing = map.get(s.employeeId)
+      if (!existing) {
+        map.set(s.employeeId, { id: s.employeeId, name: s.employeeTooltip ?? s.employeeName, slots: [s] })
+      } else {
+        existing.slots.push(s)
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [selectedEmpId, slots])
+
   return (
     <div>
       <h2 className="text-2xl font-display font-bold text-foreground mb-1">Data e hora</h2>
       <p className="text-sm text-muted-foreground font-body mb-6">{svc.name} · {svc.durationMinutes} min</p>
 
+      {loadingEmployees ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : employees.length === 0 ? (
+        <div className="text-center py-16">
+          <Scissors className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="font-display font-bold text-lg text-foreground mb-1">Indisponível neste momento</h3>
+          <p className="text-sm text-muted-foreground font-body max-w-sm mx-auto">
+            Nenhum barbeiro desta loja realiza atualmente o serviço <strong>{svc.name}</strong>.
+            Escolhe outro serviço ou volta a tentar mais tarde.
+          </p>
+        </div>
+      ) : (
+        <>
       {/* ── Barber cards ──────────────────────────────────────────────────────── */}
       <div className="mb-6">
         <p className="text-xs font-display font-semibold uppercase tracking-widest text-muted-foreground mb-3">Barbeiro</p>
@@ -396,6 +433,27 @@ function StepDateTime({
             <p className="text-sm text-muted-foreground font-body">Sem disponibilidade neste dia.</p>
             <p className="text-xs text-muted-foreground/60 font-body mt-1">Escolha outro dia no calendário.</p>
           </div>
+        ) : selectedEmpId === 'any' && groupedSlots ? (
+          <div className="space-y-5">
+            {groupedSlots.map(group => (
+              <div key={group.id}>
+                <p className="flex items-center gap-1.5 text-[11px] font-display font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                  <User className="w-3 h-3" /> {group.name}
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                  {group.slots.map(slot => (
+                    <button
+                      key={`${slot.employeeId}-${slot.time}`}
+                      onClick={() => onSelect(slot, selectedDate)}
+                      className="flex flex-col items-center justify-center h-14 rounded-xl border border-border hover:border-primary hover:bg-primary/10 transition-all group"
+                    >
+                      <span className="font-mono font-semibold text-sm text-foreground group-hover:text-primary">{slot.time}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {slots.map(slot => (
@@ -405,14 +463,13 @@ function StepDateTime({
                 className="flex flex-col items-center justify-center h-14 rounded-xl border border-border hover:border-primary hover:bg-primary/10 transition-all group"
               >
                 <span className="font-mono font-semibold text-sm text-foreground group-hover:text-primary">{slot.time}</span>
-                {selectedEmpId === 'any' && employees.length > 1 && (
-                  <span className="text-[9px] text-muted-foreground font-body truncate px-1 max-w-full">{slot.employeeName.split(' ')[0]}</span>
-                )}
               </button>
             ))}
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
@@ -483,7 +540,6 @@ function StepConfirm({
       {/* Summary card */}
       <div className="rounded-2xl border border-border bg-muted/20 p-4 mb-6 space-y-2.5">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
           <div>
             <p className="font-display font-bold text-foreground">{svc.name}</p>
             <p className="text-xs text-muted-foreground font-body">{loc.name}</p>

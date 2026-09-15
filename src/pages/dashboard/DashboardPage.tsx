@@ -11,7 +11,7 @@ import {
   Card, CardContent, CardHeader, CardTitle,
   MetricCard, PageHeader, Avatar, Spinner
 } from '@/components/ui'
-import { formatCurrency, formatTime, cn } from '@/lib/utils'
+import { formatCurrency, formatTime } from '@/lib/utils'
 import { format } from 'date-fns'
 
 // ─── 3 visible statuses ───────────────────────────────────────────────────────
@@ -36,7 +36,6 @@ export function DashboardPage() {
   const effectiveLocationId = activeLocation?.id ?? user?.locationId ?? undefined
 
   // ── Role flags ──────────────────────────────────────────────────────────────
-  const isSuperAdmin = user?.role === 'super_admin'
   const isPartner    = user?.role === 'partner'
   const isEmployee   = user?.role === 'employee'
   const isOwnOnly    = isPartner || isEmployee

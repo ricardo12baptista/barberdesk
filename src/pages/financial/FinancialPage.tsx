@@ -310,53 +310,55 @@ export function FinancialPage() {
     <div>
       <PageHeader title={t('nav.financial')} />
 
-      {isSuperAdmin && locations.length > 1 && (
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative">
-            <select
-              value={finLocationId ?? 'all'}
-              onChange={e => { setFinLocationId(e.target.value === 'all' ? undefined : e.target.value) }}
-              className={cn(
-                'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
-                'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
-              )}
-            >
-              <option value="all">Todas as Lojas</option>
-              {locations.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+      <div className="mb-5 rounded-xl border border-border/70 bg-card/60 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-display uppercase tracking-widest text-muted-foreground/60">Período</p>
+            <p className="text-xs font-body text-muted-foreground mt-0.5">{periodLabel}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {isSuperAdmin && locations.length > 1 && (
+              <div className="relative">
+                <select
+                  value={finLocationId ?? 'all'}
+                  onChange={e => { setFinLocationId(e.target.value === 'all' ? undefined : e.target.value) }}
+                  className={cn(
+                    'h-8 rounded-lg pl-2.5 pr-7 text-xs font-body appearance-none cursor-pointer',
+                    'bg-muted/30 border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary',
+                  )}
+                >
+                  <option value="all">Todas as Lojas</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+              </div>
+            )}
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+              {PERIODS.map(p => (
+                <button key={p.key} onClick={() => setPeriod(p.key)}
+                  className={cn('h-7 px-4 rounded-md text-xs font-body font-medium transition-all',
+                    period === p.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >{p.label}</button>
               ))}
-            </select>
-            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+            </div>
+            {(period === 'month' || period === 'year') && (
+              <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1">
+                <button onClick={navigateLeft} aria-label="Período anterior"
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-all"
+                ><ChevronLeft className="w-4 h-4" /></button>
+                <span className="text-xs font-display font-semibold text-foreground min-w-[100px] text-center select-none">{navLabel}</span>
+                <button onClick={navigateRight} disabled={!canNavRight} aria-label="Período seguinte"
+                  className={cn('w-6 h-6 rounded-md flex items-center justify-center transition-all',
+                    canNavRight ? 'text-muted-foreground hover:text-foreground hover:bg-background' : 'text-muted-foreground/20 cursor-not-allowed'
+                  )}
+                ><ChevronRight className="w-4 h-4" /></button>
+              </div>
+            )}
           </div>
         </div>
-      )}
-
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          {PERIODS.map(p => (
-            <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={cn('h-7 px-4 rounded-md text-xs font-body font-medium transition-all',
-                period === p.key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >{p.label}</button>
-          ))}
-        </div>
-
-        {(period === 'month' || period === 'year') && (
-          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1">
-            <button onClick={navigateLeft}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-all"
-            ><ChevronLeft className="w-4 h-4" /></button>
-            <span className="text-xs font-display font-semibold text-foreground min-w-[100px] text-center select-none">{navLabel}</span>
-            <button onClick={navigateRight} disabled={!canNavRight}
-              className={cn('w-6 h-6 rounded-md flex items-center justify-center transition-all',
-                canNavRight ? 'text-muted-foreground hover:text-foreground hover:bg-background' : 'text-muted-foreground/20 cursor-not-allowed'
-              )}
-            ><ChevronRight className="w-4 h-4" /></button>
-          </div>
-        )}
-
-        <span className="text-xs font-body text-muted-foreground">{periodLabel}</span>
       </div>
 
       {loadingSummary ? <Spinner /> : (
@@ -442,7 +444,7 @@ export function FinancialPage() {
           </div>
 
           {/* Bottom row */}
-          <div className={cn('grid gap-4', showLocationChart ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-lg')}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">

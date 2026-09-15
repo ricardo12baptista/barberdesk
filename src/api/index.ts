@@ -184,7 +184,7 @@ export interface ReportsData {
     revenue: number
   }>
   serviceStats: Array<{
-    service: { id: string; name: string; color: string }
+    service: { id: string; name: string }
     count: number
     revenue: number
   }>

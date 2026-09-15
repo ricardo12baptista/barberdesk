@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   addDays, addWeeks, addMonths, subDays, subWeeks, subMonths,
   format, isSameDay, eachDayOfInterval, getHours, getMinutes,
 } from 'date-fns'
 import { pt } from 'date-fns/locale'
+import { enGB } from 'date-fns/locale'
 
 export type CalendarView = 'day' | 'multiBarb' | 'week' | 'month'
 
@@ -13,8 +15,11 @@ export const HOUR_END   = 20  // 20:00
 export const SLOT_HEIGHT = 60 // px per hour
 
 export function useCalendar() {
+  const { i18n } = useTranslation()
   const [view, setView] = useState<CalendarView>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const dateLocale = i18n.language === 'en' ? enGB : pt
+  const intlLocale = i18n.language === 'en' ? 'en-GB' : 'pt-PT'
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') { setCurrentDate(new Date()); return }
@@ -47,14 +52,16 @@ export function useCalendar() {
 
   const title = useMemo(() => {
     if (view === 'day')
-      return format(currentDate, "EEEE, d 'de' MMMM yyyy", { locale: pt })
+      return new Intl.DateTimeFormat(intlLocale, {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      }).format(currentDate)
     if (view === 'week') {
       const s = startOfWeek(currentDate, { weekStartsOn: 1 })
       const e = endOfWeek(currentDate,   { weekStartsOn: 1 })
-      return `${format(s, 'd MMM', { locale: pt })} – ${format(e, 'd MMM yyyy', { locale: pt })}`
+      return `${format(s, 'd MMM', { locale: dateLocale })} – ${format(e, 'd MMM yyyy', { locale: dateLocale })}`
     }
-    return format(currentDate, 'MMMM yyyy', { locale: pt })
-  }, [view, currentDate])
+    return format(currentDate, 'MMMM yyyy', { locale: dateLocale })
+  }, [view, currentDate, dateLocale, intlLocale])
 
   return { view, setView, currentDate, setCurrentDate, navigate, weekDays, monthDays, hours, title }
 }
