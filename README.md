@@ -80,7 +80,7 @@ VITE_ENABLE_MOCKS=true      # false = usa API real
 
 ## Integrar com API real
 
-1. Definir `VITE_API_URL=https://api.teubackend.com` no `.env`
+1. Definir `VITE_API_URL=https://api.teubackend.com/api` no `.env`
 2. Definir `VITE_ENABLE_MOCKS=false`
 3. O código de negócio (hooks, stores, pages) **não muda** — apenas o MSW é desactivado
 

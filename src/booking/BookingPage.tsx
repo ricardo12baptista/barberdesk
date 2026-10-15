@@ -710,7 +710,7 @@ export function BookingPage() {
         <div className="w-full max-w-lg">
           <StepBar current={step} />
 
-          {step > 0 && (
+          {step > 0 && orgData.locations.length > 1 && (
             <button
               onClick={goBack}
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground font-body mb-5 transition-colors"
